@@ -11,5 +11,4 @@ batch.initialize("example.config")
 
 print("initialized = " + str(batch.initialized()))
 
-print('\n\nTicker Ouptut:')
-print(batch.bprintTicker)
+print("no running jobs: " + str(batch.getNoRunningJobs("J6ac89b30be")))

@@ -4,7 +4,7 @@ import os.path
 import subprocess
 
 
-def BatchelorException(Exception):
+class BatchelorException(Exception):
 
 	def __init__(self, value):
 		self.value = value
@@ -18,28 +18,27 @@ def runCommand(commandString):
 	process = subprocess.Popen(commandString,
 	                           shell=True,
 	                           stdout=subprocess.PIPE,
-	                           stderr=subprocess.STDOUT,
+	                           stderr=subprocess.PIPE,
 	                           executable="/bin/bash")
-	(runCommand.lastStdout, runCommand.lastStderr) = process.communicate()
-	if runCommand.lastStdout:
-		runCommand.lastStdout = runCommand.lastStdout.rstrip(' \n')
-	if runCommand.lastStderr:
-		runCommand.lastStderr = runCommand.lastStderr.rstrip(' \n')
-	errorCode = process.returncode
-	if errorCode != 0:
-		return False
+	(stdout, stderr) = process.communicate()
+	if stdout:
+		stdout = stdout.rstrip(' \n')
 	else:
-		return True
-runCommand.lastStdout = ""
-runCommand.lastStderr = ""
+		stdout = ""
+	if stderr:
+		stderr = stderr.rstrip(' \n')
+	else:
+		stderr = ""
+	return (process.returncode, stdout, stderr)
 
 
 def detectSystem():
-	if not runCommand("hostname"):
+	(returncode, stdout, stderr) = runCommand("hostname")
+	if returncode != 0:
 		raise BatchelorException("runCommand(\"hostname\") failed")
-	hostname = runCommand.lastStdout.rstrip(' \n')
+	hostname = stdout
 	if hostname.startswith("gridka"):
-		raise BatchelorException("Hostname '" + hostname + "' seems to indicate gridka, but the wrong host")
+		raise BatchelorException("hostname '" + hostname + "' seems to indicate gridka, but the wrong host")
 	elif hostname == "compass-kit.gridka.de":
 		return "gridka"
 	elif hostname.startswith("lxplus") and hostname.endswith(".cern.ch"):
@@ -101,3 +100,13 @@ class Batchelor:
 			return True
 		else:
 			return False
+
+	def submitJob(self, **keywords):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		return self.batchFunctions.submitJob(jobName)
+
+	def getNoRunningJobs(self, jobName):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		return self.batchFunctions.getNoRunningJobs(jobName)
