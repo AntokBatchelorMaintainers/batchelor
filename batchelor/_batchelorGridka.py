@@ -17,7 +17,7 @@ def submitJob(config, command, outputFile, jobName):
 	with open(fileName, 'a') as scriptFile:
 		scriptFile.write(command)
 	cmnd = "qsub "
-	cmnd += "-j y -b y "
+	cmnd += "-j y "
 	cmnd += "" if jobName is None else ("-N " + jobName + " ")
 	cmnd += "-o " + outputFile + " "
 	cmnd += "-P " + config.get(submoduleIdentifier(), "project") + " "
@@ -26,7 +26,7 @@ def submitJob(config, command, outputFile, jobName):
 	cmnd += "< " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
-		raise batchelor.BatchelorException("qsub failed")
+		raise batchelor.BatchelorException("qsub failed (stderr: '" + stderr + "')")
 	# example output: "Your job 1601905 ("J2415c980b8") has been submitted"
 	jobId = stdout.lstrip("Your job ")
 	jobId = jobId[:jobId.find(' ')]
