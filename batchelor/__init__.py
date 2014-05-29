@@ -64,16 +64,20 @@ class Batchelor:
 		if self.debug:
 			print(msg)
 
-	def initialize(self, configFileName):
+	def initialize(self, configFileName, systemOverride = ""):
 		self.bprint("Initializing...")
 		if not self._config.read(os.path.abspath(configFileName)):
 			self.bprint("Could not read config file '" + configFileName + "'. Initialization failed...")
 			return False
-		self._system = detectSystem()
-		if self._system == "UNKNOWN":
-			self.bprint("Could not determine on which system we are. Initialization failed...")
-			return False
-		self.bprint("Detected system '" + self._system + "'.")
+		if systemOverride == "":
+			self._system = detectSystem()
+			if self._system == "UNKNOWN":
+				self.bprint("Could not determine on which system we are. Initialization failed...")
+				return False
+			self.bprint("Detected system '" + self._system + "'.")
+		else:
+			self._system = systemOverride
+			self.bprint("System manually set to '" + self._system + "'.")
 		if not self._config.has_section(self._system):
 			self.bprint("Could not find section describing '" + self._system +
 			            "' in config file '" + configFileName + "'. Initialization failed...")
@@ -106,7 +110,12 @@ class Batchelor:
 			raise BatchelorException("not initialized")
 		return self.batchFunctions.submitJob(jobName)
 
-	def getNoRunningJobs(self, jobName):
+	def getNJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		return self.batchFunctions.getNoRunningJobs(jobName)
+		return self.batchFunctions.getNJobs(jobName)
+
+	def jobStillRunning(self, jobId):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		return self.batchFunctions.jobStillRunning(jobId)

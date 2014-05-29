@@ -11,4 +11,4 @@ batch.initialize("example.config")
 
 print("initialized = " + str(batch.initialized()))
 
-print("no running jobs: " + str(batch.getNoRunningJobs("J6ac89b30be")))
+print("n jobs: " + str(batch.getNJobs("J6ac89b30be")))

@@ -10,5 +10,9 @@ def submitJob(**keywords):
 	raise batchelor.BatchelorException("Not implemented")
 
 
-def getNoRunningJobs(jobName):
+def getNJobs(jobName):
+	raise batchelor.BatchelorException("Not implemented")
+
+
+def jobStillRunning(jobId):
 	raise batchelor.BatchelorException("Not implemented")
