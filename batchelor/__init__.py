@@ -50,6 +50,39 @@ def detectSystem():
 	return "UNKNOWN"
 
 
+def _getRealPath(path):
+	return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+
+
+def checkConfig(configFileName):
+	config = ConfigParser.RawConfigParser()
+	if not config.read(os.path.abspath(configFileName)):
+		print("ERROR: Could not read config file '" + configFileName + "'.")
+		return False
+	error = False
+	requiredOptions = { "e18": [],
+	                    "gridka": ["queue", "project", "memory", "header_file"],
+						"lxplus": [],
+						"lyon": [] }
+	filesToTest = { "gridka": ["header_file"] }
+	for section in requiredOptions.keys():
+		if config.has_section(section):
+			options = requiredOptions[section]
+			for option in options:
+				if not config.has_option(section, option):
+					print("ERROR: Gridka section is missing option '" + option + "'.")
+					error = True
+					continue
+				if section in filesToTest.keys() and option in filesToTest[section]:
+					path = _getRealPath(config.get(section, option))
+					if not os.path.exists(path):
+						print("ERROR: Could not find required file '" + path + "'.")
+						error = True
+	if error:
+		return False
+	return True
+
+
 class Batchelor:
 
 	debug = False
@@ -82,6 +115,9 @@ class Batchelor:
 			self.bprint("Could not find section describing '" + self._system +
 			            "' in config file '" + configFileName + "'. Initialization failed...")
 			return False
+		if not checkConfig(configFileName):
+			self.bprint("Config file contains errors. Initialization failed...")
+			return False
 		self.bprint("Importing appropriate submodule.")
 		if self._system == "gridka":
 			import batchelor._batchelorGridka as batchFunctions
@@ -105,10 +141,10 @@ class Batchelor:
 		else:
 			return False
 
-	def submitJob(self, **keywords):
+	def submitJob(self, command, outputFile, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		return self.batchFunctions.submitJob(jobName)
+		return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
 
 	def getNJobs(self, jobName = None):
 		if not self.initialized():

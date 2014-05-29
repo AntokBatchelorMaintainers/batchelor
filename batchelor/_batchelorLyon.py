@@ -6,7 +6,7 @@ def submoduleIdentifier():
 	return "lyon"
 
 
-def submitJob(**keywords):
+def submitJob(*posArgs, **keywords):
 	raise batchelor.BatchelorException("Not implemented")
 
 
