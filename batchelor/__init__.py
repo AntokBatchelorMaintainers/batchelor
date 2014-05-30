@@ -172,3 +172,35 @@ class Batchelor:
 			return self.batchFunctions.jobStillRunning(jobId)
 		else:
 			raise BatchelorException("not implemented")
+
+	def getListOfErrorJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfErrorJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.getListOfErrorJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def resetErrorJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "resetErrorJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.resetErrorJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def deleteErrorJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "deleteErrorJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.deleteErrorJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def deleteJobs(self, jobIds):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "deleteJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.deleteJobs(jobIds)
+		else:
+			raise BatchelorException("not implemented")

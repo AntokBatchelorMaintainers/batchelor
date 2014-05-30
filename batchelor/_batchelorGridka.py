@@ -43,12 +43,12 @@ def getListOfActiveJobs(jobName):
 		command = "qstat"
 		(returncode, stdout, stderr) = batchelor.runCommand(command)
 		if returncode != 0:
-			raise batchelor.BatchelorException("qstat failed")
+			raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
 		if stdout == "":
 			return []
 		jobList = stdout.split('\n')[2:]
 		try:
-			return [ int(job[:job.find(' ')]) for job in jobList ]
+			return [ int(job.split()[0]) for job in jobList ]
 		except ValueError:
 			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
 	command = "qstat -j " + jobName
@@ -56,7 +56,7 @@ def getListOfActiveJobs(jobName):
 	if returncode != 0:
 		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist or permissions are not sufficient:":
 			return []
-		raise batchelor.BatchelorException("qstat failed")
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
 	command = "qstat -xml -j " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if stdout == "" and stderr == "":
@@ -84,3 +84,45 @@ def jobStillRunning(jobId):
 		return True
 	else:
 		return False
+
+
+def getListOfErrorJobs(jobName):
+	listOfActiveJobs = getListOfActiveJobs(jobName)
+	command = "qstat"
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
+	qstatLines = stdout.split('\n')[2:]
+	listOfErrorJobs = []
+	for line in qstatLines:
+		lineList = line.split()
+		jobId = -1
+		try:
+			jobId = int(lineList[0])
+		except ValueError:
+			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
+		if jobId not in listOfActiveJobs:
+			continue
+		if lineList[4] == "Eqw":
+			listOfErrorJobs.append(jobId)
+	return listOfErrorJobs
+
+
+def resetErrorJobs(jobName):
+	return False
+
+
+def deleteErrorJobs(jobName):
+	return deleteJobs(getListOfErrorJobs(jobName))
+
+
+def deleteJobs(jobIds):
+	if not jobIds:
+		return True
+	command = "qdel"
+	for jobId in jobIds:
+		command += " " + str(jobId)
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qdel failed (stderr: '" + stderr + "')")
+	return True
