@@ -38,29 +38,49 @@ def submitJob(config, command, outputFile, jobName):
 	return jobId
 
 
-def getNJobs(jobName):
+def getListOfActiveJobs(jobName):
 	if jobName is None:
-		raise batchelor.BatchelorException("Not implemented")
+		command = "qstat"
+		(returncode, stdout, stderr) = batchelor.runCommand(command)
+		if returncode != 0:
+			raise batchelor.BatchelorException("qstat failed")
+		if stdout == "":
+			return []
+		jobList = stdout.split('\n')[2:]
+		try:
+			return [ int(job[:job.find(' ')]) for job in jobList ]
+		except ValueError:
+			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
 	command = "qstat -j " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
-		if stderr and stderr.split('\n')[0][:-1] == 'Following jobs do not exist or permissions are not sufficient:':
-			return 0
+		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist or permissions are not sufficient:":
+			return []
 		raise batchelor.BatchelorException("qstat failed")
 	command = "qstat -xml -j " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if stdout == "" and stderr == "":
 		return 0
 	root = ElementTree.fromstring(stdout)
-	nJobs = 0
+	jobIds = []
 	for child in root[0]:
-		nJobs += 1
-	return(nJobs)
+		jobIdList = child.findall("JB_job_number")
+		if len(jobIdList) != 1:
+			raise batchelor.BatchelorException("parsing xml from qstat failed")
+		try:
+			jobId = int(jobIdList[0].text)
+		except ValueError:
+			raise batchelor.BatchelorException("parsing int from xml from qstat failed")
+		jobIds.append(jobId)
+	return jobIds
+
+
+def getNActiveJobs(jobName):
+	return len(getListOfActiveJobs(jobName))
 
 
 def jobStillRunning(jobId):
-	jobId = str(jobId)
-	if getNJobs(jobId) == 1:
+	if jobId in getListOfActiveJobs(str(jobId)):
 		return True
 	else:
 		return False

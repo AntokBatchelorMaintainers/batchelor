@@ -144,14 +144,31 @@ class Batchelor:
 	def submitJob(self, command, outputFile, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
+		if "submitJob" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
+		else:
+			raise BatchelorException("not implemented")
 
-	def getNJobs(self, jobName = None):
+	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		return self.batchFunctions.getNJobs(jobName)
+		if "getListOfActiveJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.getListOfActiveJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def getNActiveJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getNActiveJobs" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.getNActiveJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
 
 	def jobStillRunning(self, jobId):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		return self.batchFunctions.jobStillRunning(jobId)
+		if "jobStillRunning" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.jobStillRunning(jobId)
+		else:
+			raise BatchelorException("not implemented")
