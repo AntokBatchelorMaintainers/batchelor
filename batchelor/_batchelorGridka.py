@@ -34,7 +34,7 @@ def submitJob(config, command, outputFile, jobName):
 		jobId = int(jobId)
 	except ValueError:
 		raise batchelor.BatchelorException('parsing of qsub output to get job id failed.')
-	batchelor.runCommand('rm -f ' + fileName)
+	batchelor.runCommand("rm -f " + fileName)
 	return jobId
 
 
@@ -57,11 +57,15 @@ def getListOfActiveJobs(jobName):
 		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist or permissions are not sufficient:":
 			return []
 		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	command = "qstat -xml -j " + jobName
+	(fileDescriptor, fileName) = tempfile.mkstemp()
+	os.close(fileDescriptor)
+	command = "qstat -xml -j " + jobName + " > " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	if stdout == "" and stderr == "":
-		return 0
-	root = ElementTree.fromstring(stdout)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
+	tree = ElementTree.parse(fileName)
+	root = tree.getroot()
+	batchelor.runCommand("rm -f " + fileName)
 	jobIds = []
 	for child in root[0]:
 		jobIdList = child.findall("JB_job_number")
