@@ -1,4 +1,5 @@
 
+import glob
 import os
 import xml.etree.ElementTree as ElementTree
 
@@ -63,19 +64,23 @@ def getListOfActiveJobs(jobName):
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	tree = ElementTree.parse(fileName)
-	root = tree.getroot()
+	batchelor.runCommand("awk '/<\?xml version='\"'\"'1.0'\"'\"'\?>/{n++}{print >\"" + fileName + "\" n \".awkOut\" }' " + fileName)
 	batchelor.runCommand("rm -f " + fileName)
+	xmlFiles = glob.glob(fileName + "*.awkOut")
 	jobIds = []
-	for child in root[0]:
-		jobIdList = child.findall("JB_job_number")
-		if len(jobIdList) != 1:
-			raise batchelor.BatchelorException("parsing xml from qstat failed")
-		try:
-			jobId = int(jobIdList[0].text)
-		except ValueError:
-			raise batchelor.BatchelorException("parsing int from xml from qstat failed")
-		jobIds.append(jobId)
+	for xmlFile in xmlFiles:
+		tree = ElementTree.parse(xmlFile)
+		root = tree.getroot()
+		batchelor.runCommand("rm -f " + xmlFile)
+		for child in root[0]:
+			jobIdList = child.findall("JB_job_number")
+			if len(jobIdList) != 1:
+				raise batchelor.BatchelorException("parsing xml from qstat failed")
+			try:
+				jobId = int(jobIdList[0].text)
+			except ValueError:
+				raise batchelor.BatchelorException("parsing int from xml from qstat failed")
+			jobIds.append(jobId)
 	return jobIds
 
 
