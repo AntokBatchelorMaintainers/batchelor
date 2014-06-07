@@ -47,6 +47,8 @@ def detectSystem():
 		return "e18"
 	elif hostname.startswith("ccage"):
 		return "lyon"
+	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
+		return "c2pap"
 	return "UNKNOWN"
 
 
@@ -54,26 +56,30 @@ def _getRealPath(path):
 	return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
 
 
-def checkConfig(configFileName):
+def checkConfig(configFileName, system = ""):
 	config = ConfigParser.RawConfigParser()
 	if not config.read(os.path.abspath(configFileName)):
 		print("ERROR: Could not read config file '" + configFileName + "'.")
 		return False
 	error = False
-	requiredOptions = { "e18": [],
+	if system != "" and not config.has_section(system):
+		print("ERROR: System set but corresponding section is missing in config file.")
+		error = True
+	requiredOptions = { "c2pap": [],
+	                    "e18": [],
 	                    "gridka": ["queue", "project", "memory", "header_file"],
-						"lxplus": [],
-						"lyon": [] }
+	                    "lxplus": [],
+	                    "lyon": [] }
 	filesToTest = { "gridka": ["header_file"] }
 	for section in requiredOptions.keys():
 		if config.has_section(section):
 			options = requiredOptions[section]
 			for option in options:
 				if not config.has_option(section, option):
-					print("ERROR: Gridka section is missing option '" + option + "'.")
+					print("ERROR: '" + section + "' section is missing option '" + option + "'.")
 					error = True
 					continue
-				if section in filesToTest.keys() and option in filesToTest[section]:
+				if section in filesToTest.keys() and option in filesToTest[section] and (system == "" or system == section):
 					path = _getRealPath(config.get(section, option))
 					if not os.path.exists(path):
 						print("ERROR: Could not find required file '" + path + "'.")
@@ -115,16 +121,18 @@ class Batchelor:
 			self.bprint("Could not find section describing '" + self._system +
 			            "' in config file '" + configFileName + "'. Initialization failed...")
 			return False
-		if not checkConfig(configFileName):
+		if not checkConfig(configFileName, self._system):
 			self.bprint("Config file contains errors. Initialization failed...")
 			return False
 		self.bprint("Importing appropriate submodule.")
-		if self._system == "gridka":
+		if self._system == "c2pap":
+			import batchelor._batchelorC2PAP as batchFunctions
+		elif self._system == "gridka":
 			import batchelor._batchelorGridka as batchFunctions
-		elif self._system == "lxplus":
-			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "e18":
 			import batchelor._batchelorE18 as batchFunctions
+		elif self._system == "lxplus":
+			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
 		else:
