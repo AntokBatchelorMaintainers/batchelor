@@ -1,0 +1,6 @@
+*.pyc
+*.root
+*.tar.gz
+*.zip
+.project
+*.log
