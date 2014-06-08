@@ -12,12 +12,18 @@ def submoduleIdentifier():
 	return "lxplus"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd = None, arrayStep = None):
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
 	with open(fileName, 'a') as scriptFile:
 		scriptFile.write(command)
+	if jobName is not None:
+		jobName = "_".join(str(jobName).split())
+	if arrayStart is not None:
+		if (jobName is None) or (len(jobName) is 0):
+			jobName = ''.join(random.sample(string.lowercase,7))
+		jobName = jobName + "[" + str(arrayStart) + "-" +  str(arrayEnd) + ":" + str(arrayStep) + "]"
 	cmnd = "bsub "
 	cmnd += "" if jobName is None else ("-J " + jobName + " ")
 	cmnd += "-o " + outputFile + " "
@@ -48,6 +54,7 @@ def submitJob(config, command, outputFile, jobName):
 
 
 def getListOfActiveJobs(jobName):
+	jobName = "_".join(str(jobName).split())
 	command = "bjobs"
 	if not (jobName is None):
 		command = command + " -J " + jobName
@@ -64,6 +71,7 @@ def getListOfActiveJobs(jobName):
 
 
 def getNActiveJobs(jobName):
+	jobName = "_".join(str(jobName).split())
 	return len(getListOfActiveJobs(jobName))
 
 
