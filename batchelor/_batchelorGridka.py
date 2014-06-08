@@ -1,4 +1,5 @@
 
+import ConfigParser
 import glob
 import os
 import xml.etree.ElementTree as ElementTree
@@ -26,6 +27,7 @@ def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd 
 	cmnd += "-P " + config.get(submoduleIdentifier(), "project") + " "
 	cmnd += "-q " + config.get(submoduleIdentifier(), "queue") + " "
 	cmnd += "-l h_vmem=" + config.get(submoduleIdentifier(), "memory") + " "
+	cmnd += _getExcludedHostsString(config)
 	cmnd += "< " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
@@ -141,3 +143,17 @@ def deleteJobs(jobIds):
 	if returncode != 0:
 		raise batchelor.BatchelorException("qdel failed (stderr: '" + stderr + "')")
 	return True
+
+
+def _getExcludedHostsString(config):
+	try:
+		hosts = config.get(submoduleIdentifier(),"excluded_hosts").split()
+	except ConfigParser.NoOptionError:
+		return ''
+	excludedString = "-l 'hostname="
+	for host in hosts:
+		if not excludedString == "-l 'hostname=":
+			excludedString = excludedString + "&"
+		excludedString = excludedString + "!" + host
+	excludedString = excludedString + "' "
+	return excludedString
