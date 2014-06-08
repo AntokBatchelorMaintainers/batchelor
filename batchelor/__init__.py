@@ -2,6 +2,7 @@
 import ConfigParser
 import os.path
 import subprocess
+import inspect
 
 
 class BatchelorException(Exception):
@@ -224,6 +225,28 @@ class Batchelor:
 					jobId = -1
 				jobIds.append(jobId)
 			return jobIds
+
+	def submitArrayJob(self, command, outputFile, jobName = None, arrayStart = 0, arrayEnd = None, arrayStep = 1):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if arrayStart is not None:
+			arrayEnd = arrayStart if arrayEnd is None else arrayEnd
+		try:
+			int(arrayStart)
+			int(arrayEnd)
+			int(arrayStep)
+		except ValueError:
+			raise BatchelorException('One of the job array parameters is non-integer')
+		if int(arrayEnd) < int(arrayStart):
+			raise BatchelorException('Last job number in array is bigger than the first')
+		if "submitJob" in self.batchFunctions.__dict__.keys():
+			if not 'arrayStart' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+				raise BatchelorException("not implemented")
+			else:
+				return self.batchFunctions.submitJob(self._config, command, outputFile, jobName,
+				                                     arrayStart, arrayEnd, arrayStep)
+		else:
+			raise BatchelorException("not implemented")
 
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
