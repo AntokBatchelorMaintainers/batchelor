@@ -56,28 +56,81 @@ def submitJob(config, command, outputFile, jobName):
 
 
 def getListOfActiveJobs(jobName):
-	raise batchelor.BatchelorException("not implemented")
+	if jobName is None:
+		command = "llq -u `whoami`"
+		(returncode, stdout, stderr) = batchelor.runCommand(command)
+		if returncode != 0:
+			raise batchelor.BatchelorException("llq failed (stderr: '" + stderr + "')")
+		if stdout == "llq: There is currently no job status to report.":
+			return []
+		stringList = [ job.split()[0] for job in stdout.split('\n')[2:-2] ]
+		jobList = []
+		try:
+			for item in stringList:
+				jobId = int(item[item.find(".")+1:item.rfind(".")])
+				if jobId not in jobList:
+					jobList.append(jobId)
+		except ValueError:
+			raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
+		return jobList
+	(fileDescriptor, fileName) = tempfile.mkstemp()
+	os.close(fileDescriptor)
+	command = "llq -u `whoami` -m &> " + fileName
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("llq failed (stderr: '" + stderr + "')")
+	jobList = []
+	currentJobId = -1
+	with open(fileName, 'r') as llqOutput:
+		for line in llqOutput:
+			line = line[:-1]
+			if line.startswith("===== Job Step xcat."):
+				try:
+					currentJobId = int(line[line.find(".")+1:line.rfind(".")])
+				except ValueError:
+					raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
+			line = ' '.join(line.split())
+			if line.startswith("Job Name: "):
+				if currentJobId < 0:
+					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+				name = line[10:]
+				print("got job name '" + jobName + "'.")
+				if name == jobName:
+					jobList.append(currentJobId)
+	batchelor.runCommand("rm -f " + fileName)
+	return jobList
 
 
 def getNActiveJobs(jobName):
-	raise batchelor.BatchelorException("not implemented")
+	return len(getListOfActiveJobs(jobName))
 
 
 def jobStillRunning(jobId):
-	raise batchelor.BatchelorException("not implemented")
+	if jobId in getListOfActiveJobs(None):
+		return True
+	else:
+		return False
 
 
 def getListOfErrorJobs(jobName = None):
 	raise batchelor.BatchelorException("not implemented")
 
 
-def resetErrorJobs():
-	raise batchelor.BatchelorException("not implemented")
+def resetErrorJobs(jobName):
+	return False
 
 
 def deleteErrorJobs(jobName):
-	raise batchelor.BatchelorException("not implemented")
+	return False
 
 
 def deleteJobs(jobIds):
-	raise batchelor.BatchelorException("not implemented")
+	if not jobIds:
+		return True
+	command = "llcancel"
+	for jobId in jobIds:
+		command += " xcat." + str(jobId)
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("llcancel failed (stderr: '" + stderr + "')")
+	return True
