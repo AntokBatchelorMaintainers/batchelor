@@ -2,10 +2,10 @@
 import ConfigParser
 import glob
 import os
+import tempfile
 import xml.etree.ElementTree as ElementTree
 
 import batchelor
-import tempfile
 
 
 def submoduleIdentifier():
