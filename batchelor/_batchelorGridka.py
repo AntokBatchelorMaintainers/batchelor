@@ -1,4 +1,5 @@
 
+import ConfigParser
 import glob
 import os
 import tempfile
@@ -11,7 +12,7 @@ def submoduleIdentifier():
 	return "gridka"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd = None, arrayStep = None):
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
@@ -20,17 +21,24 @@ def submitJob(config, command, outputFile, jobName):
 	cmnd = "qsub "
 	cmnd += "-j y "
 	cmnd += "" if jobName is None else ("-N " + jobName + " ")
+	if arrayStart is not None:
+		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o " + outputFile + " "
 	cmnd += "-P " + config.get(submoduleIdentifier(), "project") + " "
 	cmnd += "-q " + config.get(submoduleIdentifier(), "queue") + " "
 	cmnd += "-l h_vmem=" + config.get(submoduleIdentifier(), "memory") + " "
+	cmnd += _getExcludedHostsString(config)
 	cmnd += "< " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
 		raise batchelor.BatchelorException("qsub failed (stderr: '" + stderr + "')")
 	# example output: "Your job 1601905 ("J2415c980b8") has been submitted"
-	jobId = stdout.lstrip("Your job ")
-	jobId = jobId[:jobId.find(' ')]
+	if arrayStart is not None:
+		jobId = stdout.lstrip("Your job-array ")
+		jobId = jobId[:jobId.find('.')]
+	else:
+		jobId = stdout.lstrip("Your job ")
+		jobId = jobId[:jobId.find(' ')]
 	try:
 		jobId = int(jobId)
 	except ValueError:
@@ -135,3 +143,17 @@ def deleteJobs(jobIds):
 	if returncode != 0:
 		raise batchelor.BatchelorException("qdel failed (stderr: '" + stderr + "')")
 	return True
+
+
+def _getExcludedHostsString(config):
+	try:
+		hosts = config.get(submoduleIdentifier(),"excluded_hosts").split()
+	except ConfigParser.NoOptionError:
+		return ''
+	excludedString = "-l 'hostname="
+	for host in hosts:
+		if not excludedString == "-l 'hostname=":
+			excludedString = excludedString + "&"
+		excludedString = excludedString + "!" + host
+	excludedString = excludedString + "' "
+	return excludedString
