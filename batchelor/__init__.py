@@ -65,12 +65,13 @@ def checkConfig(configFileName, system = ""):
 	if system != "" and not config.has_section(system):
 		print("ERROR: System set but corresponding section is missing in config file.")
 		error = True
-	requiredOptions = { "c2pap": [],
+	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
 	                    "e18": [],
 	                    "gridka": ["queue", "project", "memory", "header_file"],
 	                    "lxplus": [],
 	                    "lyon": [] }
-	filesToTest = { "gridka": ["header_file"] }
+	filesToTest = { "gridka": [ "header_file" ],
+	                "c2pap": [ "header_file" ] }
 	for section in requiredOptions.keys():
 		if config.has_section(section):
 			options = requiredOptions[section]
