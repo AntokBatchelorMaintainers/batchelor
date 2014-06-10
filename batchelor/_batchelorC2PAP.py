@@ -32,7 +32,7 @@ def submitJob(config, command, outputFile, jobName):
 				tempFile.write(line)
 		tempFile.write("\n\n")
 		tempFile.write(command)
-	cmnd = "llsubmit " + fileName
+	cmnd = "llsubmit - < " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
 		raise batchelor.BatchelorException("llsubmit failed (stderr: '" + stderr + "')")
@@ -94,7 +94,6 @@ def getListOfActiveJobs(jobName):
 				if currentJobId < 0:
 					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
 				name = line[10:]
-				print("got job name '" + jobName + "'.")
 				if name == jobName:
 					jobList.append(currentJobId)
 	batchelor.runCommand("rm -f " + fileName)
