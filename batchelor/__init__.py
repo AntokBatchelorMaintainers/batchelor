@@ -56,6 +56,24 @@ def _getRealPath(path):
 	return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
 
 
+def _checkForSpecialCharacters(string):
+	if string is None:
+		string = ""
+	specialCharacters = [' ', ':', ';', '"', '\'', '@', '!', '?', '$', '\\', '/',
+	                     '#', '(', ')', '{', '}', '[', ']', '.', ',', '*']
+	foundChars = []
+	for char in specialCharacters:
+		if string.find(char) > 0:
+			foundChars.append(char)
+	if foundChars:
+		msg = "forbidden characters in job name ("
+		for char in foundChars:
+			msg += repr(char) + ", "
+		msg = msg[:-2]
+		msg += ")"
+		raise BatchelorException(msg)
+
+
 def checkConfig(configFileName, system = ""):
 	config = ConfigParser.RawConfigParser()
 	if not config.read(os.path.abspath(configFileName)):
@@ -156,6 +174,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
 		else:
 			raise BatchelorException("not implemented")
@@ -164,6 +183,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "getListOfActiveJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfActiveJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
@@ -172,6 +192,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "getNActiveJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getNActiveJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
@@ -188,6 +209,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "getListOfErrorJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfErrorJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
@@ -196,6 +218,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "resetErrorJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.resetErrorJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
@@ -204,6 +227,7 @@ class Batchelor:
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "deleteErrorJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.deleteErrorJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
