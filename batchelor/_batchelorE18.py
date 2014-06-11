@@ -66,7 +66,7 @@ def getListOfActiveJobs(jobName):
 	command = "qstat -j " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
-		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist or permissions are not sufficient:":
+		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist:":
 			return []
 		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
 	(fileDescriptor, fileName) = tempfile.mkstemp()
@@ -132,7 +132,7 @@ def resetErrorJobs(jobName):
 	for id in getListOfErrorJobs(jobName):
 		command = "qmod -cj " + str(id)
 		(returncode, stdout, stderr) = batchelor.runCommand(command)
-		if returncode != 0:
+		if stdout.find('cleared error state of job') is -1:
 			raise batchelor.BatchelorException("qmod failed (stderr: '" + stderr + "')")
 	return True
 
