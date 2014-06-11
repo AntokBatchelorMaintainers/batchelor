@@ -62,7 +62,7 @@ def getListOfActiveJobs(jobName):
 		return []
 	jobList = stdout.split('\n')[1:]
 	try:
-		return [ int(job.split()[0]) for job in jobList ]
+		return [ (int(job.split()[0]), job.split()[-4][job.split()[-4].find("[")+1:-1] if job.split()[-4].find("[") != -1 else '', job.split()[2] ) for job in jobList ]
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of bjobs output to get job id failed.")
 
@@ -83,7 +83,10 @@ def deleteJobs(jobIds):
 		return True
 	command = "bkill"
 	for jobId in jobIds:
-		command += ' ' + str(jobId)
+		if len(jobId) > 1 and jobId[1] != "":
+			command += " " + str(jobId[0]) + "[" + str(jobId[1]) + "]"
+		else:
+			command += " " + str(jobId[0]) if type(jobId) is tuple else " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		if not 'Job has already finished' in stderr:
