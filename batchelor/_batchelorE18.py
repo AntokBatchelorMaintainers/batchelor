@@ -77,7 +77,7 @@ def getListOfActiveJobs(jobName):
 			return []
 		jobIdList = stdout.split('\n')
 		possibleJobIds = []
-		for i in range(0,len(jobIdList),2):
+		for i in range(0, len(jobIdList), 2):
 			if jobIdList[i+1].split()[1] != jobName:
 				continue
 			possibleJobIds.append(jobIdList[i].split()[1])
