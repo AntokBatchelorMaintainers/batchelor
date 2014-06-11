@@ -56,13 +56,17 @@ def getListOfActiveJobs(jobName):
 	if not jobName is None:
 		command = command + " -J " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	#example output:
+	#JOBID     USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+	#561084149 hubers  PEND  1nd        lxplus0158.             *-J k[1-3] Sep  3 15:50
 	if returncode != 0:
 		raise batchelor.BatchelorException("bjobs failed (stderr: '" + stderr + "')")
 	if stdout == "":
 		return []
 	jobList = stdout.split('\n')[1:]
 	try:
-		return [ int(job.split()[0]) for job in jobList ]
+		return [ (int(job.split()[0]), job.split()[-4][job.split()[-4].find("[")+1:-1] if job.split()[-4].find("[") != -1 else '', job.split()[2] ) for job in jobList ]
+		#example output: [(jobId, taskId, jobStatus), ...]
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of bjobs output to get job id failed.")
 
@@ -83,7 +87,10 @@ def deleteJobs(jobIds):
 		return True
 	command = "bkill"
 	for jobId in jobIds:
-		command += ' ' + str(jobId)
+		if len(jobId) > 1 and jobId[1] != "":
+			command += " " + str(jobId[0]) + "[" + str(jobId[1]) + "]"
+		else:
+			command += " " + str(jobId[0]) if type(jobId) is tuple else " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		if not 'Job has already finished' in stderr:
