@@ -66,7 +66,7 @@ def getListOfActiveJobs(jobName):
 	command = "qstat -j " + jobName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
-		if stderr and stderr.split('\n')[0][:-1] == "Following jobs do not exist:":
+		if stderr.split('\n')[0][:-1] == "Following jobs do not exist:":
 			return []
 		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
 	(fileDescriptor, fileName) = tempfile.mkstemp()
