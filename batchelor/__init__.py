@@ -87,7 +87,8 @@ def checkConfig(configFileName, system = ""):
 	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "queue", "pool", "header_file" ],
-	                    "lyon": [] }
+	                    "lyon": [],
+	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
@@ -156,6 +157,8 @@ class Batchelor:
 			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
+		elif self._system == "simulator":
+			import batchelor._batchelorSimulator as batchFunctions
 		else:
 			self.bprint("Unknown system '" + self._system + "', cannot load appropriate submodule. Initialization failed...")
 			return False
