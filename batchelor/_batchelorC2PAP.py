@@ -17,6 +17,8 @@ def submitJob(config, command, outputFile, jobName):
 		tempFile.write("#!/bin/bash\n\n")
 		tempFile.write("#@ group = " + config.get(submoduleIdentifier(), "group") + "\n")
 		tempFile.write("#@ output = " + outputFile + "\n")
+		tempFile.write("#@ notification = " + config.get(submoduleIdentifier(), "notification") + "\n")
+		tempFile.write("#@ notify_user = " + config.get(submoduleIdentifier(), "notify_user") + "\n")
 		tempFile.write("#@ node_usage = " + config.get(submoduleIdentifier(), "node_usage") + "\n")
 		tempFile.write("#@ wall_clock_limit = " + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
 		tempFile.write("#@ resources = " + config.get(submoduleIdentifier(), "resources") + "\n")
