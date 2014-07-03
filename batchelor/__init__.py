@@ -88,11 +88,13 @@ def checkConfig(configFileName, system = ""):
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
+	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
-	                "c2pap": [ "header_file" ] }
+	                "c2pap": [ "header_file" ],
+	                "local": [ "shell" ] }
 	for section in requiredOptions.keys():
 		if config.has_section(section):
 			options = requiredOptions[section]
@@ -157,6 +159,9 @@ class Batchelor:
 			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
+		elif self._system == "local":
+			import batchelor._batchelorLocal as batchFunctions
+			batchFunctions.initialize(self._config)
 		elif self._system == "simulator":
 			import batchelor._batchelorSimulator as batchFunctions
 		else:
