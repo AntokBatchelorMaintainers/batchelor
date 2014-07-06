@@ -51,52 +51,51 @@ def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd 
 
 
 def getListOfActiveJobs(jobName):
-	if jobName is None:
-		command = "qstat"
+	command = "qstat"
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
+	jobList = stdout.split('\n')[2:]
+	if len(jobList) is 0:
+		return []
+	if jobName is not None:
+		possibleJobIds = []
+		for job in jobList:
+			if job.split()[2][:10] != jobName[:10]:
+				continue
+			if job.split()[0] not in possibleJobIds:
+				possibleJobIds.append(job.split()[0])
+		command = "qstat -j " + ','.join(possibleJobIds) + " |grep 'job_number\|job_name'"
 		(returncode, stdout, stderr) = batchelor.runCommand(command)
 		if returncode != 0:
 			raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
 		if stdout == "":
 			return []
-		jobList = stdout.split('\n')[2:]
-		try:
-			return [ int(job.split()[0]) for job in jobList ]
-		except ValueError:
-			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
-	command = "qstat -j " + jobName
-	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	if returncode != 0:
-		if stderr.split('\n')[0][:-1] == "Following jobs do not exist:":
-			return []
-		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	(fileDescriptor, fileName) = tempfile.mkstemp()
-	os.close(fileDescriptor)
-	command = "qstat -xml -j " + jobName + " > " + fileName
-	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	if returncode != 0:
-		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	batchelor.runCommand("awk '/<\?xml version='\"'\"'1.0'\"'\"'\?>/{n++}{print >\"" + fileName + "\" n \".awkOut\" }' " + fileName)
-	batchelor.runCommand("rm -f " + fileName)
-	xmlFiles = glob.glob(fileName + "*.awkOut")
-	jobIds = []
-	for xmlFile in xmlFiles:
-		tree = ElementTree.parse(xmlFile)
-		root = tree.getroot()
-		batchelor.runCommand("rm -f " + xmlFile)
-		for child in root[0]:
-			jobIdList = child.findall("JB_job_number")
-			if len(jobIdList) != 1:
-				raise batchelor.BatchelorException("parsing xml from qstat failed")
-			try:
-				jobId = int(jobIdList[0].text)
-			except ValueError:
-				raise batchelor.BatchelorException("parsing int from xml from qstat failed")
-			jobIds.append(jobId)
-	return jobIds
-
+		jobIdList = stdout.split('\n')
+		possibleJobIds = []
+		for i in range(0,len(jobIdList),2):
+			if jobIdList[i+1].split()[1] != jobName:
+				continue
+			possibleJobIds.append(jobIdList[i].split()[1])
+	returnList = []
+	try:
+		for job in jobList:
+			if jobName is None or job.split()[0] in possibleJobIds:
+				returnList.append( ( int(job.split()[0]), job.split()[-1] if job.split()[-2].isdigit() else '', job.split()[4] ) )
+		return returnList
+	except ValueError:
+		raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
 
 def getNActiveJobs(jobName):
-	return len(getListOfActiveJobs(jobName))
+	Njobs = 0
+	for job in getListOfActiveJobs(jobName):
+		for taskGroup in job[1].split(','):
+			if len(taskGroup.split('-')) is 1:
+				Njobs += 1
+			else:
+				distance = int(taskGroup.split('-')[1].split(':')[0]) -  int(taskGroup.split('-')[0]) + 1
+				Njobs += int( (distance / float(taskGroup.split('-')[1].split(':')[1])) + 0.5 )
+	return Njobs
 
 
 def jobStillRunning(jobId):
@@ -108,34 +107,20 @@ def jobStillRunning(jobId):
 
 def getListOfErrorJobs(jobName):
 	listOfActiveJobs = getListOfActiveJobs(jobName)
-	command = "qstat"
-	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	if returncode != 0:
-		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	qstatLines = stdout.split('\n')[2:]
 	listOfErrorJobs = []
-	for line in qstatLines:
-		lineList = line.split()
-		jobId = -1
-		try:
-			jobId = int(lineList[0])
-		except ValueError:
-			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
-		if jobId not in listOfActiveJobs:
-			continue
-		if lineList[4] == "Eqw":
-			listOfErrorJobs.append(jobId)
+	for job in listOfActiveJobs:
+		if job[1] == "Eqw":
+			listOfErrorJobs.append(job)
 	return listOfErrorJobs
 
 
 def resetErrorJobs(jobName):
 	for id in getListOfErrorJobs(jobName):
-		command = "qmod -cj " + str(id)
+		command = "qmod -cj " + str(id[0])
 		(returncode, stdout, stderr) = batchelor.runCommand(command)
 		if stdout.find('cleared error state of job') is -1:
 			raise batchelor.BatchelorException("qmod failed (stderr: '" + stderr + "')")
 	return True
-
 
 
 def deleteErrorJobs(jobName):
@@ -147,7 +132,11 @@ def deleteJobs(jobIds):
 		return True
 	command = "qdel"
 	for jobId in jobIds:
-		command += " " + str(jobId)
+		if len(jobId) > 1 and jobId[1] != "":
+			for taskGroup in jobId[1].split(','):
+				command += " " + str(jobId[0]) + " -t " + taskGroup
+		else:
+			command += " " + str(jobId[0]) if type(jobId) is tuple else " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("qdel failed (stderr: '" + stderr + "')")
