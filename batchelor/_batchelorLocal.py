@@ -120,7 +120,7 @@ def getNActiveJobs(jobName):
 
 def jobStillRunning(jobId):
 	with guard:
-		for i in range(len(self.jobs)):
+		for i in range(len(jobs)):
 			if jobs[i].jobId == jobId:
 				return True
 	return False
@@ -141,7 +141,7 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	for jobId in jobIds:
 		with guard:
-			for i in range(len(self.jobs)):
+			for i in range(len(jobs)):
 				if jobs[i].jobId == jobId:
 					break
 			if jobs[i].jobId != jobId:
