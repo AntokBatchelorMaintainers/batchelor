@@ -194,6 +194,13 @@ class Batchelor:
 			raise BatchelorException("not implemented")
 
 	def submitJobs(self, jobs):
+		# 'jobs' should be a list of arguments as they need to be specified for
+		# 'submitJob', e.g.:
+		#     [ [ "command 1", "output file 1", "name 1" ],
+		#       [ "command 2", "output file 2", None ],
+		#       ... ]
+		# The return value is a list of job IDs in the same order as the jobs.
+		# A job ID of -1 indicates an error during submission of this job.
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJobs" in self.batchFunctions.__dict__.keys():
