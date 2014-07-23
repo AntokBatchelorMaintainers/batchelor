@@ -4,6 +4,7 @@ import os
 import Queue
 import subprocess
 import tempfile
+import threading
 
 import batchelor
 
@@ -18,10 +19,10 @@ class Job:
 		self.running = False
 
 
-class Worker(multiprocessing.Process):
+class Worker(threading.Thread):
 
 	def __init__(self, shell):
-		multiprocessing.Process.__init__(self)
+		threading.Thread.__init__(self)
 		self.shell = shell
 
 	def run(self):
@@ -51,7 +52,7 @@ class Worker(multiprocessing.Process):
 			cmdFile.close()
 
 			with open(outputFile, "w") as logFile:
-				subprocess.call([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT)
+				subprocess.call([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
 
 			os.unlink(cmdFile.name)
 			with guard:
@@ -65,11 +66,10 @@ class Worker(multiprocessing.Process):
 
 
 workers = []
-manager = multiprocessing.Manager()
-guard = manager.Lock()
-queue = manager.Queue()
-jobs = manager.list()
-aux = manager.list([0, False])
+guard = threading.Lock()
+queue = Queue.Queue()
+jobs = []
+aux = [0, False]
 
 
 def initialize(config):
