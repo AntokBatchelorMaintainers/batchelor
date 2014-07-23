@@ -1,8 +1,10 @@
 
 import multiprocessing
 import os
+import Queue
 import subprocess
 import tempfile
+import threading
 
 import batchelor
 
@@ -17,20 +19,25 @@ class Job:
 		self.running = False
 
 
-class Worker(multiprocessing.Process):
+class Worker(threading.Thread):
 
-	def __init__(self, shell, queue, guard, jobs):
-		multiprocessing.Process.__init__(self)
+	def __init__(self, shell):
+		threading.Thread.__init__(self)
 		self.shell = shell
-		self.queue = queue
-		self.guard = guard
-		self.jobs = jobs
 
 	def run(self):
 		while True:
-			jobId = self.queue.get()
+			try:
+				jobId = queue.get(timeout = 2)
+			except Queue.Empty:
+				with guard:
+					if aux[1]:
+						break
+					else:
+						continue
+
 			with guard:
-				for i in range(len(self.jobs)):
+				for i in range(len(jobs)):
 					if jobs[i].jobId == jobId:
 						break
 				if jobs[i].jobId != jobId:
@@ -45,24 +52,24 @@ class Worker(multiprocessing.Process):
 			cmdFile.close()
 
 			with open(outputFile, "w") as logFile:
-				subprocess.call([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT)
+				subprocess.call([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
 
 			os.unlink(cmdFile.name)
 			with guard:
-				for i in range(len(self.jobs)):
+				for i in range(len(jobs)):
 					if jobs[i].jobId == jobId:
 						break
 				if jobs[i].jobId != jobId:
 					raise batchelor.BatchelorException("Job ID {0} finished, but already removed from list of jobs.".format(jobId))
 				del jobs[i]
-			self.queue.task_done()
+			queue.task_done()
 
 
-manager = multiprocessing.Manager()
-guard = manager.Lock()
-queue = manager.Queue()
-jobs = manager.list()
-aux = manager.list([0])
+workers = []
+guard = threading.Lock()
+queue = Queue.Queue()
+jobs = []
+aux = [0, False]
 
 
 def initialize(config):
@@ -73,8 +80,18 @@ def initialize(config):
 	shell = config.get(submoduleIdentifier(), "shell")
 
 	for i in range(cores):
-		worker = Worker(shell, queue, guard, jobs)
+		worker = Worker(shell)
 		worker.start()
+		workers.append(worker)
+
+
+def shutdown():
+	# signal processes to stop after all jobs have been finished from queue
+	with guard:
+		aux[1] = True
+
+	for worker in workers:
+		worker.join()
 
 
 def submoduleIdentifier():
@@ -90,6 +107,24 @@ def submitJob(config, command, outputFile, jobName):
 	return jobId
 
 
+def submitJobs(config, newJobs):
+	jobIds = []
+	with guard:
+		for job in newJobs:
+			aux[0] += 1
+			jobId = aux[0]
+			command = job[0]
+			outputFile = job[1]
+			jobName = None
+			if len(job) == 3:
+				jobName = job[2]
+
+			jobs.append(Job(jobId, command, outputFile, jobName))
+			queue.put(jobId)
+			jobIds.append(jobId)
+	return jobIds
+
+
 def getListOfActiveJobs(jobName):
 	with guard:
 		return [ job.jobId for job in jobs ]
@@ -102,7 +137,7 @@ def getNActiveJobs(jobName):
 
 def jobStillRunning(jobId):
 	with guard:
-		for i in range(len(self.jobs)):
+		for i in range(len(jobs)):
 			if jobs[i].jobId == jobId:
 				return True
 	return False
@@ -123,7 +158,7 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	for jobId in jobIds:
 		with guard:
-			for i in range(len(self.jobs)):
+			for i in range(len(jobs)):
 				if jobs[i].jobId == jobId:
 					break
 			if jobs[i].jobId != jobId:

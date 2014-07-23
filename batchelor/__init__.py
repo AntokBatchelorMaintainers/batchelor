@@ -178,6 +178,12 @@ class Batchelor:
 		else:
 			return False
 
+	def shutdown(self):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "shutdown" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.shutdown()
+
 	def submitJob(self, command, outputFile, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
@@ -186,6 +192,38 @@ class Batchelor:
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
 		else:
 			raise BatchelorException("not implemented")
+
+	def submitJobs(self, jobs):
+		# 'jobs' should be a list of arguments as they need to be specified for
+		# 'submitJob', e.g.:
+		#     [ [ "command 1", "output file 1", "name 1" ],
+		#       [ "command 2", "output file 2", None ],
+		#       ... ]
+		# The return value is a list of job IDs in the same order as the jobs.
+		# A job ID of -1 indicates an error during submission of this job.
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "submitJobs" in self.batchFunctions.__dict__.keys():
+			for i in range(len(jobs)):
+				if len(jobs[i]) == 3:
+					_checkForSpecialCharacters(jobs[i][2])
+				elif len(jobs[i]) == 2:
+					# the 'submitJob' method of the 'Batchelor' class
+					# has a default argument for the job name, do 
+					# something similar here
+					jobs[i].append(None)
+				else:
+					raise BatchelorException("wrong number of arguments")
+			return self.batchFunctions.submitJobs(self._config, jobs)
+		else:
+			jobIds = []
+			for job in jobs:
+				try:
+					jobId = self.submitJob(*job)
+				except batchelor.BatchelorException as exc:
+					jobId = -1
+				jobIds.append(jobId)
+			return jobIds
 
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
