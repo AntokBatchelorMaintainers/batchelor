@@ -187,6 +187,26 @@ class Batchelor:
 		else:
 			raise BatchelorException("not implemented")
 
+	def submitJobs(self, jobs):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "submitJobs" in self.batchFunctions.__dict__.keys():
+			for job in jobs:
+				if len(job) == 3:
+					_checkForSpecialCharacters(job[2])
+				elif len(obj) != 2:
+					raise BatchelorException("wrong number of arguments")
+			return self.batchFunctions.submitJobs(self._config, jobs)
+		else:
+			jobIds = []
+			for job in jobs:
+				try:
+					jobId = self.submitJob(*job)
+				except batchelor.BatchelorException as exc:
+					jobId = -1
+				jobIds.append(jobId)
+			return jobIds
+
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")

@@ -90,6 +90,24 @@ def submitJob(config, command, outputFile, jobName):
 	return jobId
 
 
+def submitJobs(config, newJobs):
+	jobIds = []
+	with guard:
+		for job in newJobs:
+			aux[0] += 1
+			jobId = aux[0]
+			command = job[0]
+			outputFile = job[1]
+			jobName = None
+			if len(job) == 3:
+				jobName = job[2]
+
+			jobs.append(Job(jobId, command, outputFile, jobName))
+			queue.put(jobId)
+			jobIds.append(jobId)
+	return jobIds
+
+
 def getListOfActiveJobs(jobName):
 	with guard:
 		return [ job.jobId for job in jobs ]
