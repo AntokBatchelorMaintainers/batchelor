@@ -1,4 +1,5 @@
 
+import multiprocessing
 import os
 import tempfile
 
@@ -55,6 +56,28 @@ def submitJob(config, command, outputFile, jobName):
 		raise batchelor.BatchelorException('parsing of qsub output to get job id failed.')
 	batchelor.runCommand("rm -f " + fileName)
 	return jobId
+
+
+def _wrapSubmitJob(args):
+	try:
+		return submitJob(*args)
+	except batchelor.BatchelorException as exc:
+		return -1
+
+
+def submitJobs(config, newJobs):
+	if len(newJobs) == 0:
+		return []
+
+	for i in range(len(newJobs)):
+		newJobs[i].insert(0, config)
+
+	pool = multiprocessing.Pool(processes = len(newJobs))
+	jobIds = pool.map(_wrapSubmitJob, newJobs, 1)
+	pool.close()
+	pool.join()
+
+	return jobIds
 
 
 def getListOfActiveJobs(jobName):
