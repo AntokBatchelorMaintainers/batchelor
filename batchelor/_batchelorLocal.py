@@ -1,6 +1,7 @@
 
 import multiprocessing
 import os
+import Queue
 import subprocess
 import tempfile
 
@@ -25,7 +26,15 @@ class Worker(multiprocessing.Process):
 
 	def run(self):
 		while True:
-			jobId = self.queue.get()
+			try:
+				jobId = queue.get(timeout = 2)
+			except Queue.Empty:
+				with guard:
+					if aux[1]:
+						break
+					else:
+						continue
+
 			with guard:
 				for i in range(len(jobs)):
 					if jobs[i].jobId == jobId:
@@ -55,11 +64,12 @@ class Worker(multiprocessing.Process):
 			queue.task_done()
 
 
+workers = []
 manager = multiprocessing.Manager()
 guard = manager.Lock()
 queue = manager.Queue()
 jobs = manager.list()
-aux = manager.list([0])
+aux = manager.list([0, False])
 
 
 def initialize(config):
@@ -72,6 +82,16 @@ def initialize(config):
 	for i in range(cores):
 		worker = Worker(shell)
 		worker.start()
+		workers.append(worker)
+
+
+def shutdown():
+	# signal processes to stop after all jobs have been finished from queue
+	with guard:
+		aux[1] = True
+
+	for worker in workers:
+		worker.join()
 
 
 def submoduleIdentifier():
