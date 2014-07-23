@@ -19,18 +19,15 @@ class Job:
 
 class Worker(multiprocessing.Process):
 
-	def __init__(self, shell, queue, guard, jobs):
+	def __init__(self, shell):
 		multiprocessing.Process.__init__(self)
 		self.shell = shell
-		self.queue = queue
-		self.guard = guard
-		self.jobs = jobs
 
 	def run(self):
 		while True:
 			jobId = self.queue.get()
 			with guard:
-				for i in range(len(self.jobs)):
+				for i in range(len(jobs)):
 					if jobs[i].jobId == jobId:
 						break
 				if jobs[i].jobId != jobId:
@@ -49,13 +46,13 @@ class Worker(multiprocessing.Process):
 
 			os.unlink(cmdFile.name)
 			with guard:
-				for i in range(len(self.jobs)):
+				for i in range(len(jobs)):
 					if jobs[i].jobId == jobId:
 						break
 				if jobs[i].jobId != jobId:
 					raise batchelor.BatchelorException("Job ID {0} finished, but already removed from list of jobs.".format(jobId))
 				del jobs[i]
-			self.queue.task_done()
+			queue.task_done()
 
 
 manager = multiprocessing.Manager()
@@ -73,7 +70,7 @@ def initialize(config):
 	shell = config.get(submoduleIdentifier(), "shell")
 
 	for i in range(cores):
-		worker = Worker(shell, queue, guard, jobs)
+		worker = Worker(shell)
 		worker.start()
 
 
