@@ -178,6 +178,12 @@ class Batchelor:
 		else:
 			return False
 
+	def shutdown(self):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "shutdown" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.shutdown()
+
 	def submitJob(self, command, outputFile, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
