@@ -69,11 +69,12 @@ def submitJobs(config, newJobs):
 	if len(newJobs) == 0:
 		return []
 
-	for i in range(len(newJobs)):
-		newJobs[i].insert(0, config)
+	poolJobsArgs = []
+	for job in newJobs:
+		poolJobsArgs.append([config] + job)
 
 	pool = multiprocessing.Pool(processes = len(newJobs))
-	jobIds = pool.map(_wrapSubmitJob, newJobs, 1)
+	jobIds = pool.map(_wrapSubmitJob, poolJobsArgs, 1)
 	pool.close()
 	pool.join()
 
