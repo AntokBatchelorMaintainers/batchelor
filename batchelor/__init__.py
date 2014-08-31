@@ -200,6 +200,42 @@ class Batchelor:
 		else:
 			raise BatchelorException("not implemented")
 
+	def getListOfQueuedJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfQueuedJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getListOfQueuedJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def getListOfOnHoldJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfOnHoldJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getListOfOnHoldJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def setQueuedJobsOnHold(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "setQueuedJobsOnHold" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.setQueuedJobsOnHold(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def setOnHoldJobsRunning(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "setOnHoldJobsRunning" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.setOnHoldJobsRunning(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
 	def jobStillRunning(self, jobId):
 		if not self.initialized():
 			raise BatchelorException("not initialized")

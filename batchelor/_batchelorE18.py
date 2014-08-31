@@ -95,6 +95,28 @@ def getListOfActiveJobs(jobName):
 	return jobIds
 
 
+def setQueuedJobsOnHold(jobName):
+	listOfQueuedJobs = getListOfQueuedJobs(jobName)
+	command = "qhold"
+	for job in listOfQueuedJobs:
+		command += " "+str(job[0])+"."+str(job[1])
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("Setting job on hold failed (stderr: '" + stderr + "')")
+	return True
+
+
+def setOnHoldJobsRunning(jobName):
+	listOfOnHoldJobs = getListOfOnHoldJobs(jobName)
+	command = "qalter -h U"
+	for job in listOfOnHoldJobs:
+		command += " "+str(job[0])+"."+str(job[1])
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("Setting on hold jobs running failed (stderr: '" + stderr + "')")
+	return True
+
+
 def getNActiveJobs(jobName):
 	return len(getListOfActiveJobs(jobName))
 
@@ -104,6 +126,58 @@ def jobStillRunning(jobId):
 		return True
 	else:
 		return False
+
+
+def getListOfQueuedJobs(jobName):
+	listOfActiveJobs = getListOfActiveJobs(jobName)
+	command = "qstat"
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
+	qstatLines = stdout.split('\n')[2:]
+	listOfQueuedJobs = []
+	for line in qstatLines:
+		lineList = line.split()
+		jobId = -1
+		try:
+			jobId = int(lineList[0])
+			if len(lineList) == 9:
+				jobRunIds = lineList[8]
+			else:
+				jobRunIds = lineList[9]
+		except ValueError:
+			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
+		if jobId not in listOfActiveJobs:
+			continue
+		if lineList[4] == "qw":
+			listOfQueuedJobs.append((jobId,jobRunIds))
+	return listOfQueuedJobs
+
+
+def getListOfOnHoldJobs(jobName):
+	listOfActiveJobs = getListOfActiveJobs(jobName)
+	command = "qstat"
+	(returncode, stdout, stderr) = batchelor.runCommand(command)
+	if returncode != 0:
+		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
+	qstatLines = stdout.split('\n')[2:]
+	listOfQueuedJobs = []
+	for line in qstatLines:
+		lineList = line.split()
+		jobId = -1
+		try:
+			jobId = int(lineList[0])
+			if len(lineList) == 9:
+				jobRunIds = lineList[8]
+			else:
+				jobRunIds = lineList[9]
+		except ValueError:
+			raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
+		if jobId not in listOfActiveJobs:
+			continue
+		if lineList[4].find("h") != -1:
+			listOfQueuedJobs.append((jobId,jobRunIds))
+	return listOfQueuedJobs
 
 
 def getListOfErrorJobs(jobName):
