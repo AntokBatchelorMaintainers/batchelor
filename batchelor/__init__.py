@@ -226,25 +226,24 @@ class Batchelor:
 				jobIds.append(jobId)
 			return jobIds
 
-	def submitArrayJob(self, command, outputFile, jobName = None, arrayStart = 0, arrayEnd = None, arrayStep = 1):
+	def submitArrayJob(self, command, outputFile, arrayStart, arrayEnd, arrayStep = 1, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if arrayStart is not None:
-			arrayEnd = arrayStart if arrayEnd is None else arrayEnd
 		try:
-			int(arrayStart)
-			int(arrayEnd)
-			int(arrayStep)
+			arrayStart = int(arrayStart)
+			arrayEnd = int(arrayEnd)
+			arrayStep = int(arrayStep)
 		except ValueError:
 			raise BatchelorException('one of the job array parameters is non-integer')
-		if int(arrayEnd) < int(arrayStart):
+		if arrayEnd < arrayStart:
 			raise BatchelorException('last job number in array is bigger than the first')
 		if "submitJob" in self.batchFunctions.__dict__.keys():
-			if not 'arrayStart' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
-				raise BatchelorException("not implemented")
-			else:
+			if "arrayStart" in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+				_checkForSpecialCharacters(jobName)
 				return self.batchFunctions.submitJob(self._config, command, outputFile, jobName,
 				                                     arrayStart, arrayEnd, arrayStep)
+			else:
+				raise BatchelorException("not implemented")
 		else:
 			raise BatchelorException("not implemented")
 
