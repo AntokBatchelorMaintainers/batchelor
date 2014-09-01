@@ -133,11 +133,18 @@ def deleteJobs(jobIds):
 		return True
 	command = "qdel"
 	for jobId in jobIds:
-		if len(jobId) > 1 and jobId[1] != "":
-			for taskGroup in jobId[1].split(','):
-				command += " " + str(jobId[0]) + " -t " + taskGroup
+		# deleteJobs might be called with two different kind of arguments:
+		# Being internally called, it may get a list of tuples from, e.g.,
+		# the getListOfActiveJobs function. On the otherhand, when called
+		# from the outside a simple list of job IDs (ints) might be passed.
+		if type(jobId) is tuple:
+			if len(jobId) > 1 and jobId[1] != "":
+				for taskGroup in jobId[1].split(','):
+					command += " " + str(jobId[0]) + " -t " + taskGroup
+			else:
+				command += " " + str(jobId[0])
 		else:
-			command += " " + str(jobId[0]) if type(jobId) is tuple else " " + str(jobId)
+			command += " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("qdel failed (stderr: '" + stderr + "')")

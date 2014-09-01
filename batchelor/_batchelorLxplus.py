@@ -83,10 +83,17 @@ def deleteJobs(jobIds):
 		return True
 	command = "bkill"
 	for jobId in jobIds:
-		if len(jobId) > 1 and jobId[1] != "":
-			command += " " + str(jobId[0]) + "[" + str(jobId[1]) + "]"
+		# deleteJobs might be called with two different kind of arguments:
+		# Being internally called, it may get a list of tuples from, e.g.,
+		# the getListOfActiveJobs function. On the otherhand, when called
+		# from the outside a simple list of job IDs (ints) might be passed.
+		if type(jobId) is tuple:
+			if len(jobId) > 1 and jobId[1] != "":
+				command += " " + str(jobId[0]) + "[" + str(jobId[1]) + "]"
+			else:
+				command += " " + str(jobId[0])
 		else:
-			command += " " + str(jobId[0]) if type(jobId) is tuple else " " + str(jobId)
+			command += " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		if not 'Job has already finished' in stderr:
