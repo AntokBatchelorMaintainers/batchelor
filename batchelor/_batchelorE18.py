@@ -86,6 +86,7 @@ def getListOfActiveJobs(jobName):
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
 
+
 def getNActiveJobs(jobName):
 	Njobs = 0
 	for job in getListOfActiveJobs(jobName):
@@ -99,7 +100,7 @@ def getNActiveJobs(jobName):
 
 
 def jobStillRunning(jobId):
-	if jobId in getListOfActiveJobs(str(jobId)):
+	if jobId in [ i[0] for i in getListOfActiveJobs(None) ]:
 		return True
 	else:
 		return False
@@ -109,7 +110,7 @@ def getListOfErrorJobs(jobName):
 	listOfActiveJobs = getListOfActiveJobs(jobName)
 	listOfErrorJobs = []
 	for job in listOfActiveJobs:
-		if job[1] == "Eqw":
+		if job[2] == "Eqw":
 			listOfErrorJobs.append(job)
 	return listOfErrorJobs
 

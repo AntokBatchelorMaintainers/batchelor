@@ -210,7 +210,7 @@ class Batchelor:
 					_checkForSpecialCharacters(jobs[i][2])
 				elif len(jobs[i]) == 2:
 					# the 'submitJob' method of the 'Batchelor' class
-					# has a default argument for the job name, do 
+					# has a default argument for the job name, do
 					# something similar here
 					jobs[i].append(None)
 				else:

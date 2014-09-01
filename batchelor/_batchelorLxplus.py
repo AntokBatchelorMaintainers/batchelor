@@ -72,7 +72,7 @@ def getNActiveJobs(jobName):
 
 
 def jobStillRunning(jobId):
-	if jobId in getListOfActiveJobs(str(jobId)):
+	if jobId in [ i[0] for i in getListOfActiveJobs(None) ]:
 		return True
 	else:
 		return False
