@@ -9,7 +9,7 @@ def submoduleIdentifier():
 	return "c2pap"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd = None, arrayStep = None):
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	headerFileName = batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file"))

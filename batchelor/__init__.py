@@ -173,12 +173,12 @@ class Batchelor:
 		else:
 			return False
 
-	def submitJob(self, command, outputFile, jobName = None):
+	def submitJob(self, command, outputFile, jobName = None, arrayStart = None, arrayEnd = None, arrayStep = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
-			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
+			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, arrayStart, arrayEnd, arrayStep)
 		else:
 			raise BatchelorException("not implemented")
 
