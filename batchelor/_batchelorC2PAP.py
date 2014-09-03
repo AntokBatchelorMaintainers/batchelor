@@ -121,9 +121,10 @@ def getListOfActiveJobs(jobName):
 					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
 				name = line[10:]
 				if name == jobName:
-					jobList.append(currentJobId)
+					jobList.append((currentJobId, -1 ,"dummy"))
 	batchelor.runCommand("rm -f " + fileName)
 	return jobList
+	#example output: [(jobId, 0, "dummy"), ...]
 
 
 def getNActiveJobs(jobName):
