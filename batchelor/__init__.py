@@ -226,7 +226,7 @@ class Batchelor:
 				jobIds.append(jobId)
 			return jobIds
 
-	def submitArrayJob(self, command, outputFile, arrayStart, arrayEnd, arrayStep, jobName = None):
+	def submitArrayJob(self, command, outputFile, arrayStart, arrayEnd, arrayStep = 1, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		try:
@@ -234,7 +234,7 @@ class Batchelor:
 			arrayEnd = int(arrayEnd)
 			arrayStep = int(arrayStep)
 		except ValueError:
-			raise BatchelorException('One of the job array parameters is non-integer')
+			raise BatchelorException('one of the job array parameters is non-integer')
 		if arrayEnd < arrayStart:
 			raise BatchelorException('Last task number in array is bigger than the first')
 		if "submitJob" in self.batchFunctions.__dict__.keys():

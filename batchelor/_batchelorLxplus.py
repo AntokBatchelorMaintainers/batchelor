@@ -63,6 +63,7 @@ def getListOfActiveJobs(jobName):
 	jobList = stdout.split('\n')[1:]
 	try:
 		return [ (int(job.split()[0]), job.split()[-4][job.split()[-4].find("[")+1:-1] if job.split()[-4].find("[") != -1 else '', job.split()[2] ) for job in jobList ]
+		#example output: [(jobId, taskId, jobStatus), ...]
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of bjobs output to get job id failed.")
 

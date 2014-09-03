@@ -70,7 +70,7 @@ def getListOfActiveJobs(jobName):
 			return []
 		jobIdList = stdout.split('\n')
 		possibleJobIds = []
-		for i in range(0,len(jobIdList),2):
+		for i in range(0, len(jobIdList), 2):
 			if jobIdList[i+1].split()[1] != jobName:
 				continue
 			possibleJobIds.append(jobIdList[i].split()[1])
@@ -80,6 +80,7 @@ def getListOfActiveJobs(jobName):
 			if jobName is None or job.split()[0] in possibleJobIds:
 				returnList.append( ( int(job.split()[0]), job.split()[-1] if job.split()[-2].isdigit() else '', job.split()[4] ) )
 		return returnList
+		#example output; [(jobId, taskId, jobStatus), ...]
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
 
