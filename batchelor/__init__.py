@@ -256,6 +256,15 @@ class Batchelor:
 		else:
 			raise BatchelorException("not implemented")
 
+	def getExtendedListOfActiveJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getExtendedListOfActiveJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getExtendedListOfActiveJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
 	def getNActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
