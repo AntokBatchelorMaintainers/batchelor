@@ -38,6 +38,7 @@ def submitJob(config, command, outputFile, jobName):
 	cmnd = "llsubmit - < " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
+		batchelor.runCommand("rm -f " + fileName)
 		raise batchelor.BatchelorException("llsubmit failed (stderr: '" + stderr + "')")
 	# example ouptut:
 	#
@@ -53,6 +54,7 @@ def submitJob(config, command, outputFile, jobName):
 	try:
 		jobId = int(jobId)
 	except ValueError:
+		batchelor.runCommand("rm -f " + fileName)
 		raise batchelor.BatchelorException('parsing of qsub output to get job id failed.')
 	batchelor.runCommand("rm -f " + fileName)
 	return jobId
@@ -104,6 +106,7 @@ def getListOfActiveJobs(jobName):
 	command = "llq -u `whoami` -m &> " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
+		batchelor.runCommand("rm -f " + fileName)
 		raise batchelor.BatchelorException("llq failed (stderr: '" + stderr + "')")
 	jobList = []
 	currentJobId = -1
@@ -114,10 +117,12 @@ def getListOfActiveJobs(jobName):
 				try:
 					currentJobId = int(line[line.find(".")+1:line.rfind(".")])
 				except ValueError:
+					batchelor.runCommand("rm -f " + fileName)
 					raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
 			line = ' '.join(line.split())
 			if line.startswith("Job Name: "):
 				if currentJobId < 0:
+					batchelor.runCommand("rm -f " + fileName)
 					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
 				name = line[10:]
 				if name == jobName:
