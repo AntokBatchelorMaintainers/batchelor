@@ -40,17 +40,21 @@ def submitJob(config, command, outputFile, jobName):
 	if returncode != 0:
 		batchelor.runCommand("rm -f " + fileName)
 		raise batchelor.BatchelorException("llsubmit failed (stderr: '" + stderr + "')")
-	# example ouptut:
+	# example output stdout:
+	# llsubmit: The job "mgmt.12309" has been submitted.
 	#
-	#INFO: Project: pr83mo
-	#INFO: Project's Expiration Date:    2015-01-31
-	#INFO: Budget:                     Total [cpuh]        Used [cpuh]      Credit [cpuh]
-	#INFO:                                  1350000       259009 (19%)      1090991 (81%)
+	# example output stderr:
 	#
-	#llsubmit: Processed command file through Submit Filter: "/lrz/loadl/filter/submit_filter_c2pap.pl".
-	#llsubmit: The job "xcat.2021566" has been submitted.
-	jobId = stdout.split("\n")[-1]
-	jobId = jobId[jobId.find('"xcat.')+6:jobId.rfind('"')]
+	# llsubmit: Stdin job command file written to "/tmp/loadlx_stdin.27558.CdoVxX".
+	#
+	# INFO: Project: pr83mo
+	# INFO: Project's Expiration Date:    2015-01-31
+	# INFO: Budget:                     Total [cpuh]        Used [cpuh]      Credit [cpuh]
+	# INFO:                                  1350000      1011028 (75%)       338972 (25%)
+	#
+	# llsubmit: Processed command file through Submit Filter: "/lrz/loadl/filter/submit_filter_c2pap.pl".
+	jobId = stdout.split("\n")[0]
+	jobId = jobId[jobId.find('"mgmt.')+6:jobId.rfind('"')]
 	try:
 		jobId = int(jobId)
 	except ValueError:
@@ -113,7 +117,7 @@ def getListOfActiveJobs(jobName):
 	with open(fileName, 'r') as llqOutput:
 		for line in llqOutput:
 			line = line[:-1]
-			if line.startswith("===== Job Step xcat."):
+			if line.startswith("===== Job Step mgmt."):
 				try:
 					currentJobId = int(line[line.find(".")+1:line.rfind(".")])
 				except ValueError:
@@ -159,7 +163,7 @@ def deleteJobs(jobIds):
 		return True
 	command = "llcancel"
 	for jobId in jobIds:
-		command += " xcat." + str(jobId)
+		command += " mgmt." + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("llcancel failed (stderr: '" + stderr + "')")
