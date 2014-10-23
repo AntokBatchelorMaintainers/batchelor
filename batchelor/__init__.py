@@ -3,6 +3,8 @@ import ConfigParser
 import os.path
 import subprocess
 
+import _job
+
 
 class BatchelorException(Exception):
 
@@ -33,7 +35,7 @@ def runCommand(commandString):
 
 
 def detectSystem():
-	(returncode, stdout, stderr) = runCommand("hostname")
+	(returncode, stdout, stderr) = runCommand("hostname -f")
 	if returncode != 0:
 		raise BatchelorException("runCommand(\"hostname\") failed")
 	hostname = stdout
@@ -259,6 +261,24 @@ class Batchelor:
 			return self.batchFunctions.getListOfErrorJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
+		
+	def getListOfWaitingJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfWaitingJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getListOfWaitingJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def getListOfRunningJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfRunningJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getListOfRunningJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
 
 	def resetErrorJobs(self, jobName = None):
 		if not self.initialized():
@@ -283,5 +303,20 @@ class Batchelor:
 			raise BatchelorException("not initialized")
 		if "deleteJobs" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.deleteJobs(jobIds)
+		else:
+			raise BatchelorException("not implemented")
+		
+	def getListOfJobStates(self, jobIDs = None, username = None):
+		'''
+		Get the job stats of all jobs
+		@param jobIDs: Lock only of jobs with the given jobIDs
+		@param username: Look only of jobs of the given username
+		@return: List of all job states of all active jobs
+		@rtype: list
+		'''
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getListOfJobStates" in self.batchFunctions.__dict__.keys():
+			return self.batchFunctions.getListOfJobStates(jobIDs, username)
 		else:
 			raise BatchelorException("not implemented")
