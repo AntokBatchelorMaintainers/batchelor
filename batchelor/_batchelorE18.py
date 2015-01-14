@@ -30,7 +30,7 @@ def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd 
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o " + outputFile + " "
 	cmnd += "-wd " + "/tmp/" + " "
-	cmnd += "-l short=" + config.get(submoduleIdentifier(), "shortqueue") + " "
+	cmnd += "-l short=1" if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
 	cmnd += "-l h_vmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)
