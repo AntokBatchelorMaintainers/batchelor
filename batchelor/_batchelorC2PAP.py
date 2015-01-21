@@ -8,7 +8,7 @@ from _job import JobStatus
 
 
 
-_kMemoryUnits = {'mb': 1.0 / 1024.0, 'gb': 1.0}
+_kMemoryUnits = {'mb': 1.0 / 1024.0, 'm': 1.0 / 1024.0, 'gb': 1.0, 'g': 1.0}
 
 
 def submoduleIdentifier():
@@ -93,7 +93,7 @@ def submitJobs(config, newJobs):
 
 
 def getListOfActiveJobs(jobName):
-	return map( lambda j: j.getId(), getListOfJobStates(jobName) )
+	return map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
 
 
 def getNActiveJobs(jobName):
@@ -132,8 +132,11 @@ def deleteJobs(jobIds):
 
 
 
-def getListOfJobStates(jobName, username = None):
-	command = "llq -u `whoami` -m -x"
+def getListOfJobStates(jobName, username = None, detailed = True):
+	if detailed:
+		command = "llq -u `whoami` -m -x"
+	else:
+		command = "llq -u `whoami` -m"
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("llq failed (stderr: '" + stderr + "')")
@@ -141,57 +144,55 @@ def getListOfJobStates(jobName, username = None):
 	jobStates = []
 	currentJobId = -1
 	currentJobStatus = None;
-	with stdout.split('\n') as llqOutput:
-		for line in llqOutput:
-			line = line[:-1]
-			if line.startswith("===== Job Step mgmt."):
-				try:
-					currentJobId = int(line[line.find(".")+1:line.rfind(".")])
-					currentJobStatus = JobStatus(currentJobId)
-				except ValueError:
-					raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
-			line = ' '.join(line.split())
+	for line in stdout.split('\n'):
+		line = line[:-1]
+		if line.startswith("===== Job Step mgmt."):
+			try:
+				currentJobId = int(line[line.find(".")+1:line.rfind(".")])
+				currentJobStatus = JobStatus(currentJobId)
+			except ValueError:
+				raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
+		line = ' '.join(line.split())
 
-			if line.startswith("Job Name: "):
-				if currentJobId < 0:
-					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
-				name = line[10:]
-				if name == jobName or jobName == None:
-					jobList.append(currentJobId)
-					jobStates.append(currentJobStatus)
-			elif line.startswith("Step Virtual Memory: "):
-				if currentJobId < 0:
-					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
-				try:
-					parsed = line.lstrip().lstrip('Step Virtual Memory:').split()
-					currentJobStatus.setMemoryUsage( float(parsed[0]) * _kMemoryUnits[parsed[1]], 0)
-				except ValueError:
-					raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
-			elif line.startswith("Status: "):
-				if currentJobId < 0:
-					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+		if line.startswith("Job Name: "):
+			if currentJobId < 0:
+				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+			name = line[10:]
+			if name == jobName or jobName == None:
+				jobList.append(currentJobId)
+				jobStates.append(currentJobStatus)
+		elif line.startswith("Step Virtual Memory: "):
+			if currentJobId < 0:
+				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+			try:
+				parsed = line.lstrip().lstrip('Step Virtual Memory:').split()
+				currentJobStatus.setMemoryUsage( float(parsed[0]) * _kMemoryUnits[parsed[1]], 0)
+			except ValueError:
+				raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
+		elif line.startswith("Status: "):
+			if currentJobId < 0:
+				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+			else:
+				status = line.lstrip().lstrip("Status: ")
+				if status == 'Running':
+					currentJobStatus.setStatus(JobStatus.kRunning)
+				elif status == 'I':
+					currentJobStatus.setStatus(JobStatus.kWaiting)
+				elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed':
+					currentJobStatus.setStatus(JobStatus.kError)
 				else:
-					status = line.lstrip().lstrip("Status: ")
-					if status == 'Running':
-						currentJobStatus.setStatus(JobStatus.kRunning)
-					elif status == 'I':
-						currentJobStatus.setStatus(JobStatus.kWaiting)
-					elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed':
-						currentJobStatus.setStatus(JobStatus.kError)
-					else:
-						currentJobStatus.setStatus(JobStatus.kUnknown)
-			elif line.startswith("Step User Time: "):
-				if currentJobId < 0:
-					raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
-				time_str = line.lstrip().lstrip("Step User Time:").split(':')
-				try:
-					hours = float(time_str[0])
-					minuts = float(time_str[1])
-					seconds = float(time_str[2])
-					total_time = hours + minuts / 60.0 + seconds / 3600.0
-					currentJobStatus.setCpuTime(total_time, 0)
-				except ValueError:
-					raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
+					currentJobStatus.setStatus(JobStatus.kUnknown)
+		elif line.startswith("Step User Time: "):
+			if currentJobId < 0:
+				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
+			time_str = line.lstrip().lstrip("Step User Time:").split(':')
+			try:
+				hours = float(time_str[0])
+				minuts = float(time_str[1])
+				seconds = float(time_str[2])
+				total_time = hours + minuts / 60.0 + seconds / 3600.0
+				currentJobStatus.setCpuTime(total_time, 0)
+			except ValueError:
+				raise batchelor.BatchelorException("parsing of llq output to get job id failed.")
 	
 	return jobStates
-	
