@@ -132,7 +132,7 @@ def deleteJobs(jobIds):
 
 
 
-def getListOfJobStates(jobName, username):
+def getListOfJobStates(jobName, username = None):
 	if jobName is None:
 		command = "llq -u `whoami`"
 		(returncode, stdout, stderr) = batchelor.runCommand(command)
