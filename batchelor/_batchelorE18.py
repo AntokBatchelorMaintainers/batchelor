@@ -230,7 +230,7 @@ def getListOfJobStates(select_jobIDs, username):
 	for i, jobID in enumerate(jobIDs):
 		if select_jobIDs == None or jobID in select_jobIDs:
 			job_status = JobStatus(jobID);
-			job_status.setStatus( JobStatus.kUnknown );
+			job_status.setStatus( JobStatus.kUnknown, name = jobStates[i] );
 			
 			if jobStates[i] == 'qw':
 				job_status.setStatus( JobStatus.kWaiting );

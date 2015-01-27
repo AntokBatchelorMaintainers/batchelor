@@ -174,14 +174,14 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")
 			else:
 				status = line.lstrip().lstrip("Status: ")
+				currentJobStatus.setStatus(JobStatus.kUnknown, name = status)
 				if status == 'Running':
 					currentJobStatus.setStatus(JobStatus.kRunning)
 				elif status == 'I':
 					currentJobStatus.setStatus(JobStatus.kWaiting)
 				elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed':
 					currentJobStatus.setStatus(JobStatus.kError)
-				else:
-					currentJobStatus.setStatus(JobStatus.kUnknown)
+
 		elif line.startswith("Step User Time: "):
 			if currentJobId < 0:
 				raise batchelor.BatchelorException("parsing of llq output failed, got job name before job id.")

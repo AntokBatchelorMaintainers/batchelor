@@ -16,11 +16,15 @@ class JobStatus(object):
         
         self._status = status;
         
+        self._status_name = None;
+        
         self._cpu_time = { -1: 0.0};
         self._memory_usage = {-1: 0.0};
 
-    def setStatus(self, value):
+    def setStatus(self, value, name = None):
         self._status = int(value)
+        if name != None:
+            self._status_name = name;
 
 
     def setCpuTime(self, value, task_id):
