@@ -145,7 +145,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 	currentJobId = -1
 	currentJobStatus = None;
 	for line in stdout.split('\n'):
-		line = line[:-1]
+		line = line.rstrip('\n')
 		if line.startswith("===== Job Step mgmt."):
 			try:
 				currentJobId = int(line[line.find(".")+1:line.rfind(".")])
@@ -179,7 +179,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 					currentJobStatus.setStatus(JobStatus.kRunning)
 				elif status == 'I':
 					currentJobStatus.setStatus(JobStatus.kWaiting)
-				elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed':
+				elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed' or status == 'Remove Pending':
 					currentJobStatus.setStatus(JobStatus.kError)
 
 		elif line.startswith("Step User Time: "):
