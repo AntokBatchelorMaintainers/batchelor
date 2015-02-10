@@ -238,7 +238,7 @@ def getListOfJobStates(select_jobIDs, username):
 			elif jobStates[i] == 'Eq':
 				job_status.setStatus( JobStatus.kError );
 				
-			elif jobStates[i] == 'r':
+			elif jobStates[i] == 'r' or jobStates[i] == 'hr':
 				
 				# get detailed job information
 				command = "qstat -xml -j {0}".format(jobID);
