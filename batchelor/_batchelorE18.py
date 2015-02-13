@@ -232,7 +232,7 @@ def getListOfJobStates(select_jobIDs, username):
 			job_status = JobStatus(jobID);
 			job_status.setStatus( JobStatus.kUnknown, name = jobStates[i] );
 			
-			if jobStates[i] == 'qw':
+			if jobStates[i] == 'qw' or jobStates[i] == 'hqw':
 				job_status.setStatus( JobStatus.kWaiting );
 				
 			elif jobStates[i] == 'Eq':
