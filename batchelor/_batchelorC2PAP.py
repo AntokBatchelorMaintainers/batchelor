@@ -177,7 +177,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				currentJobStatus.setStatus(JobStatus.kUnknown, name = status)
 				if status == 'Running':
 					currentJobStatus.setStatus(JobStatus.kRunning)
-				elif status == 'I':
+				elif status == 'I' or status == 'Idle' or status == 'Pending':
 					currentJobStatus.setStatus(JobStatus.kWaiting)
 				elif status == 'Submission Error' or status == 'Terminated' or status == 'Removed' or status == 'Remove Pending':
 					currentJobStatus.setStatus(JobStatus.kError)
