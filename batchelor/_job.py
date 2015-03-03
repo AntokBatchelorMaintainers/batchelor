@@ -7,7 +7,7 @@ class JobStatus(object):
     
     
     # Status
-    (kRunning, kWaiting, kError, kUnknown ) = range(4);
+    (kRunning, kWaiting, kError, kUnknown, kTransfering ) = range(4);
 
 
     def __init__(self, job_id, status = None):

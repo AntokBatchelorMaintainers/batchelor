@@ -235,6 +235,9 @@ def getListOfJobStates(select_jobIDs, username):
 			if jobStates[i] == 'qw' or jobStates[i] == 'hqw':
 				job_status.setStatus( JobStatus.kWaiting );
 				
+			if jobStates[i] == 't':
+				job_status.setStatus( JobStatus.kTransfering )
+				
 			elif jobStates[i] == 'Eq':
 				job_status.setStatus( JobStatus.kError );
 				
