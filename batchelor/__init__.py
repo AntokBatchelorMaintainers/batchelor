@@ -2,6 +2,7 @@
 import ConfigParser
 import os.path
 import subprocess
+import time
 
 import _job
 
@@ -186,12 +187,12 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
-			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName)
+			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd)
 		else:
 			raise BatchelorException("not implemented")
 
@@ -320,3 +321,76 @@ class Batchelor:
 			return self.batchFunctions.getListOfJobStates(jobIDs, username)
 		else:
 			raise BatchelorException("not implemented")
+
+
+
+class BatchelorHandler(Batchelor):
+	'''
+		Specialization of the Batchelor class 
+		to also handle running jobs
+	'''
+	
+	def __init__(self, configfile = '~/.batchelorrc'):
+		'''
+		Initialize the batchelor
+		@param configfile: Path to batchelor configfile
+		'''
+		
+		Batchelor.__init__(self)
+		Batchelor.initialize(self, os.path.expanduser(configfile) )
+		
+		self._submittedJobs = []
+		
+	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None):
+		'''
+		Submit job with the given command
+		
+		@param command: Command to be executed
+		@param wd: Working directory. Default = current workingdirectory
+		@param output: Path or directory fo log files
+		@param jobName: Name of the submitted job. Default='Batchelor'
+		
+		@return: jobID
+		'''
+		if not jobName:
+			jobName = 'Batchelor'
+		if not wd:
+			wd = os.getcwd()
+
+		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd)
+
+		if jid:
+			self._submittedJobs.append(jid)
+		return jid;
+			
+		
+	def getListOfSubmittedActiveJobs(self, jobName=None):
+		'''
+		Get list of all running jobs, which have been submitted by this instance
+		@return: List of running jobs
+		'''
+		
+		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
+	
+	
+	def wait(self, timeout = 10, jobName = None):
+		'''
+		Wait for all jobs, submitted by this instance, to be finished
+		
+		@param timeout: Timeout in seconds between checking the joblist
+		@param jobName: Only wait for jobs with the given job-name
+		'''
+		
+		running_jobs = self.getListOfSubmittedActiveJobs(jobName)
+		while running_jobs:
+			if self.debug:
+				print "Waiting for jobs:", running_jobs;
+			time.sleep(timeout)
+			running_jobs = self.getListOfSubmittedActiveJobs(jobName)
+			
+		return;
+
+			
+			
+		
+		

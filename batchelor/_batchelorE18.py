@@ -15,7 +15,15 @@ def submoduleIdentifier():
 	return "e18"
 
 
-def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd = None, arrayStep = None):
+def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
+	
+	# some checks of the job-settings
+	if os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
+		raise batchelor.BatchelorException("The given working-directory is in your home-folder which is no allowed at E18: '{0}'".format(wd))
+
+	if os.path.realpath(outputFile).count(os.path.realpath(os.path.expanduser('~'))):
+		raise batchelor.BatchelorException("The given output-file is in your home-folder which is no allowed at E18: '{0}'".format(outputFile))
+	
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
@@ -29,8 +37,8 @@ def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd 
 	if arrayStart is not None:
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o " + outputFile + " "
-	cmnd += "-wd " + "/tmp/" + " "
-	cmnd += "-l short=1" if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
+	cmnd += "-wd " + ("/tmp/" if not wd else wd) + " "
+	cmnd += "-l short=1 " if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
 	cmnd += "-l h_vmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)

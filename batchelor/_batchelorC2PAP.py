@@ -15,7 +15,10 @@ def submoduleIdentifier():
 	return "c2pap"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, wd = None):
+	if wd:
+		raise batchelor.BatchelorException("Choosing the working directory is not jet implemented for {0}".format(submoduleIdentifier()))
+
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	headerFileName = batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file"))
