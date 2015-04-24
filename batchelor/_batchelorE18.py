@@ -18,7 +18,7 @@ def submoduleIdentifier():
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
 	
 	# some checks of the job-settings
-	if os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
+	if wd and os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
 		raise batchelor.BatchelorException("The given working-directory is in your home-folder which is no allowed at E18: '{0}'".format(wd))
 
 	if os.path.realpath(outputFile).count(os.path.realpath(os.path.expanduser('~'))):
