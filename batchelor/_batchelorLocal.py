@@ -100,7 +100,7 @@ def submoduleIdentifier():
 
 def submitJob(config, command, outputFile, jobName, wd = None):
 	if wd:
-		raise batchelor.BatchelorException("Choosing the working directory is not jet implemented for {0}".format(submoduleIdentifier()))
+		command = "cd '{0}'; {1}".format(wd, command)
 
 	with guard:
 		aux[0] += 1

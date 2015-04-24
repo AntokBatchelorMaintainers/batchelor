@@ -330,14 +330,15 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 	
-	def __init__(self, configfile = '~/.batchelorrc'):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = ""):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
+		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...)
 		'''
 		
 		Batchelor.__init__(self)
-		Batchelor.initialize(self, os.path.expanduser(configfile) )
+		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
 		
 		self._submittedJobs = []
 		
@@ -387,6 +388,7 @@ class BatchelorHandler(Batchelor):
 				print "Waiting for jobs:", running_jobs;
 			time.sleep(timeout)
 			running_jobs = self.getListOfSubmittedActiveJobs(jobName)
+			
 			
 		return;
 
