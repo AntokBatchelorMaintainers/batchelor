@@ -330,15 +330,24 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 	
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = ""):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
 		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...)
+                @param n_threads: Number of threads for local processing. 
+                @param memory: Set used memory per job
 		'''
 		
 		Batchelor.__init__(self)
 		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
+		
+		if memory:
+			for section in self._config.sections():
+				if "memory" in [ e[0] for e in self._config.items(section)]:
+					self._config.set(section, "memory", memory)
+		if systemOverride == "local" and n_threads:
+			self._config.set("local","cores", n_threads);
 		
 		self._submittedJobs = []
 		
