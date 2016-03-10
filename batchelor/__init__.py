@@ -3,6 +3,7 @@ import ConfigParser
 import os.path
 import subprocess
 import time
+import signal
 
 import _job
 
@@ -383,13 +384,22 @@ class BatchelorHandler(Batchelor):
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
 	
 	
-	def wait(self, timeout = 10, jobName = None):
+	def wait(self, timeout = 10, jobName = None, catch_SIGINT=True):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
 		
 		@param timeout: Timeout in seconds between checking the joblist
 		@param jobName: Only wait for jobs with the given job-name
 		'''
+		
+		def finish(signal, frame):
+			print "You pressed Ctrl+C ... stopping all jobs ..."
+			self.deleteJobs( self.getListOfSubmittedActiveJobs())
+			print "Done"
+			exit(0);
+			
+		if catch_SIGINT:
+			signal.signal( signal.SIGINT, finish)
 		
 		running_jobs = self.getListOfSubmittedActiveJobs(jobName)
 		while running_jobs:
