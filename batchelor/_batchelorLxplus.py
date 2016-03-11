@@ -13,8 +13,6 @@ def submoduleIdentifier():
 
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
-	if wd:
-		raise batchelor.BatchelorException("Choosing the working directory is not jet implemented for {0}".format(submoduleIdentifier()))
 
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
@@ -30,6 +28,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	cmnd += "-o " + outputFile + " "
 	cmnd += "-q " + config.get(submoduleIdentifier(), "queue") + " "
 	cmnd += "-R '"
+	cmnd += "-cwd '{0}'".format(wd) if wd else ""
 	cmnd += " select[type=" + config.get(submoduleIdentifier(), "type") + "]"
 	cmnd += " rusage[pool=" + config.get(submoduleIdentifier(), "pool") + "]"
 	try:
