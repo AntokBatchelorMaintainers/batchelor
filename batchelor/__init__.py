@@ -15,6 +15,13 @@ class BatchelorException(Exception):
 
 	def __str__(self):
 		return repr(self.value)
+class CancelException(Exception):
+
+	def __init__(self, value):
+		self.value = value
+
+	def __str__(self):
+		return repr(self.value)
 
 
 def runCommand(commandString):
@@ -393,10 +400,15 @@ class BatchelorHandler(Batchelor):
 		'''
 		
 		def finish(signal, frame):
-			print "You pressed Ctrl+C ... stopping all jobs ..."
-			self.deleteJobs( self.getListOfSubmittedActiveJobs())
-			print "Done"
-			exit(0);
+			print 
+			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
+				print "stopping all jobs ..."
+				self.deleteJobs( self.getListOfSubmittedActiveJobs())
+				time.sleep(5);
+				print "Done"
+				raise CancelException( "Catched Ctrl+C" );
+			else:
+				print "continuing.."
 			
 		if catch_SIGINT:
 			signal.signal( signal.SIGINT, finish)
