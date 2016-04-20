@@ -4,6 +4,7 @@ import os.path
 import subprocess
 import time
 import signal
+import tempfile
 
 import _job
 
@@ -231,7 +232,7 @@ class Batchelor:
 			for job in jobs:
 				try:
 					jobId = self.submitJob(*job)
-				except batchelor.BatchelorException as exc:
+				except BatchelorException as exc:
 					jobId = -1
 				jobIds.append(jobId)
 			return jobIds
@@ -338,13 +339,14 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 	
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0, check_job_success = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
-		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...)
-                @param n_threads: Number of threads for local processing. 
-                @param memory: Set used memory per job
+		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...).
+		@param n_threads: Number of threads for local processing. 
+		@param memory: Set used memory per job.
+		@param check_job_success: Check if the job has been finished successfully.
 		'''
 		
 		Batchelor.__init__(self)
@@ -358,14 +360,17 @@ class BatchelorHandler(Batchelor):
 			self._config.set("local","cores", n_threads);
 		
 		self._submittedJobs = []
-		
+		self._commands = []
+		self._logfiles = []
+		self._check_job_success = check_job_success
+
 	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None):
 		'''
 		Submit job with the given command
 		
 		@param command: Command to be executed
 		@param wd: Working directory. Default = current workingdirectory
-		@param output: Path or directory fo log files
+		@param output: Path or directory of log files. If not given, but check_job_success is selected, a .log folder will be created in the wd 
 		@param jobName: Name of the submitted job. Default='Batchelor'
 		
 		@return: jobID
@@ -374,11 +379,23 @@ class BatchelorHandler(Batchelor):
 			jobName = 'Batchelor'
 		if not wd:
 			wd = os.getcwd()
+			
+		if output == '/dev/null' and self._check_job_success: # if not output file is given but the job success should be checked anyway
+			logdir = os.path.join(wd, '.log')
+			if not os.path.isdir(logdir):
+				os.makedirs( logdir )
+			output = tempfile.mktemp(prefix = time.strftime("%Y-%m-%d_%H-%M-%S_"),suffix = '.log', dir = logdir)
+			
+		if self._check_job_success:
+			command = command + " && echo \"BatchelorStatus: OK\" || echo \"BatchelorStatus: ERROR\""
+			
 
 		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd)
 
 		if jid:
 			self._submittedJobs.append(jid)
+			self._commands.append( command )
+			self._logfiles.append( output )
 		return jid;
 			
 		
@@ -424,6 +441,31 @@ class BatchelorHandler(Batchelor):
 		return;
 
 			
+	def checkJobStates(self):
+		if not self._check_job_success:
+			print "Called checkJobStates, but Batchelor was not configured to check job states"
+			return False
+		
+		ok = True
+		for i_job, log_file in enumerate( self._logfiles ):
+			found = False
+			for _ in xrange(10): # 10 trails to wait for log file
+				if os.path.isfile(log_file):
+					found = True
+					break
+				time.sleep(6)
+			if not found:		
+				print "Can not find logfile '{0}'".format(log_file)
+				print "\tfor command:'{0}'".format(self._commands[i_job])
+				ok = False;
+			else:
+				with open(log_file) as fin:
+					log_file_content = fin.read();
+					if not "BatchelorStatus: OK\n" in log_file_content:
+						print "Error in logfile '{0}'".format(log_file)
+						print "\tfor command:'{0}'".format(self._commands[i_job])
+						ok = False;
 			
 		
 		
+		return ok;
