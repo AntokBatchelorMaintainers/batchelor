@@ -15,7 +15,7 @@ def submoduleIdentifier():
 	return "e18"
 
 
-def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
+def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None):
 	
 	# some checks of the job-settings
 	if wd and os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
@@ -23,6 +23,9 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 
 	if os.path.realpath(outputFile).count(os.path.realpath(os.path.expanduser('~'))):
 		raise batchelor.BatchelorException("The given output-file is in your home-folder which is no allowed at E18: '{0}'".format(outputFile))
+	
+	if priority:
+		priority = int(-1024 + 2048 * (priority+1.0)/2.0)
 	
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
@@ -42,6 +45,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)
+	cmnd += "-p {0} ".format(priority) if priority else ""
 	cmnd += "< " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:

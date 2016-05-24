@@ -5,6 +5,8 @@ import subprocess
 import time
 import signal
 import tempfile
+import inspect
+import pickle
 
 import _job
 
@@ -196,12 +198,24 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None, wd = None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None):
+		'''
+		@param priority: Job priority [-1.0, 1.0]
+		'''
+		kwargs = {}
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
-			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd)
+			if priority != None:
+				priority = float(priority)
+				if priority < -1.0 or priority > 1.0:
+					raise BaseException("Priority must be within [-1.0, 1.0]")
+				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+					raise BatchelorException("Priority not implemented")
+				kwargs['priority'] = priority
+					
+			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
 			raise BatchelorException("not implemented")
 
@@ -339,7 +353,7 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 	
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0, check_job_success = False):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0, check_job_success = False, store_commands = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
@@ -347,6 +361,7 @@ class BatchelorHandler(Batchelor):
 		@param n_threads: Number of threads for local processing. 
 		@param memory: Set used memory per job.
 		@param check_job_success: Check if the job has been finished successfully.
+		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
 		'''
 		
 		Batchelor.__init__(self)
@@ -363,8 +378,17 @@ class BatchelorHandler(Batchelor):
 		self._commands = []
 		self._logfiles = []
 		self._check_job_success = check_job_success
+		self._store_commands = store_commands
+		self._store_commands_filename = ""
+		
+		if self._store_commands:
+			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
+			if os.path.isdir(self._store_commands):
+				self._store_commands_filename = os.path.join(self._store_commands, self._store_commands_filename)
+			else: 
+				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
 
-	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None):
+	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
 		'''
 		Submit job with the given command
 		
@@ -387,15 +411,22 @@ class BatchelorHandler(Batchelor):
 			output = tempfile.mktemp(prefix = time.strftime("%Y-%m-%d_%H-%M-%S_"),suffix = '.log', dir = logdir)
 			
 		if self._check_job_success:
-			command = command + " && echo \"BatchelorStatus: OK\" || echo \"BatchelorStatus: ERROR\""
+			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR\"; exit $s)"
 			
 
-		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd)
+		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority)
 
 		if jid:
 			self._submittedJobs.append(jid)
 			self._commands.append( command )
 			self._logfiles.append( output )
+			
+			if self._store_commands:
+				with open(self._store_commands_filename, 'a') as fout:
+					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority}
+					submit = {jid:submit_entry}
+					pickle.dump(submit, fout, protocol=2)
+				
 		return jid;
 			
 		
@@ -419,9 +450,10 @@ class BatchelorHandler(Batchelor):
 		def finish(signal, frame):
 			print 
 			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
-				print "stopping all jobs ..."
+				print "stopping all jobs and shutting down batchelor..."
 				self.deleteJobs( self.getListOfSubmittedActiveJobs())
-				time.sleep(5);
+				time.sleep(3);
+				self.shutdown()
 				print "Done"
 				raise CancelException( "Catched Ctrl+C" );
 			else:
@@ -441,12 +473,13 @@ class BatchelorHandler(Batchelor):
 		return;
 
 			
-	def checkJobStates(self):
+	def checkJobStates(self, verbose=True):
 		if not self._check_job_success:
 			print "Called checkJobStates, but Batchelor was not configured to check job states"
 			return False
 		
-		ok = True
+		error_ids = []
+		error_logfiles = []
 		for i_job, log_file in enumerate( self._logfiles ):
 			found = False
 			for _ in xrange(10): # 10 trails to wait for log file
@@ -455,17 +488,66 @@ class BatchelorHandler(Batchelor):
 					break
 				time.sleep(6)
 			if not found:		
-				print "Can not find logfile '{0}'".format(log_file)
-				print "\tfor command:'{0}'".format(self._commands[i_job])
-				ok = False;
+				if verbose:
+					if not error_ids: # first found error
+						print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					print "Can not find logfile '{0}'".format(log_file)
+					print "\tfor command:'{0}'".format(self._commands[i_job])
+				error_ids.append( self._submittedJobs[i_job])
+				error_logfiles.append(log_file)
 			else:
 				with open(log_file) as fin:
 					log_file_content = fin.read();
-					if not "BatchelorStatus: OK\n" in log_file_content:
-						print "Error in logfile '{0}'".format(log_file)
-						print "\tfor command:'{0}'".format(self._commands[i_job])
-						ok = False;
+					if "BatchelorStatus: ERROR\n" in log_file_content or not "BatchelorStatus: OK\n" in log_file_content:
+						if verbose:
+							if not error_ids: # first found error
+								print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+							print "Error in logfile '{0}'".format(log_file)
+							print "\tfor command:'{0}'".format(self._commands[i_job])
+						error_ids.append( self._submittedJobs[i_job])
+						error_logfiles.append(log_file)
+		
+		return error_ids, error_logfiles;
+
+	def resubmitStoredJobs(self, jobs_filename, jobids_to_submit = None):
+		'''
+		@param jobids_to_submitparam: If not given, all jobs are resubmitted 
+		@return ids of resubmitted jobs {old_jobid: new_jobid}
+		''' 
+		jobs = []
+		with open(jobs_filename) as fin:
+			while True:
+				try:
+					j = pickle.load(fin)
+					jobs.append(j)
+				except EOFError:
+					break;
+		# change to dictionary
+		jobs = { j.keys()[0]: j.values()[0] for j in jobs }	
+		
+		if not jobids_to_submit:
+			jobids_to_submit = sorted(jobs.keys());
+			
+		key_type = type(jobs.keys()[0])
+		new_jobids = {}
+		for jid in jobids_to_submit:
+			jid = key_type(jid)
+			if not jid in jobs:
+				raise BatchelorException("Can not resubmit jobid '{0}'. Not in given jobs file.".format(jid))
+			# append old output file to outputfile.old
+			outputFile = jobs[jid]['output']
+			if os.path.isfile(outputFile):
+				with open(outputFile+".old", "a") as fout:
+					with open(outputFile) as fin:
+						fout.write(fin.read())
+				os.remove(outputFile)
+			print "Resubmit job:", jid
+			for k in sorted(jobs[jid].keys()):
+				print "\t{0}: {1}".format(k, jobs[jid][k])
+			new_jid = self.submitJob( **jobs[jid] )
+			new_jobids[jid] = new_jid
+			
+		return new_jobids
 			
 		
-		
-		return ok;
+			
