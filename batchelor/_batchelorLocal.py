@@ -79,7 +79,12 @@ def initialize(config):
 
 	shell = config.get(submoduleIdentifier(), "shell")
 
-	for i in range(cores):
+	# in case the 'initialize' function of batchelor is called multiple
+	# times, the number of workers might pile up, so only make sure that
+	# the number of existing workers is equal to the current desired
+	# setting.
+	newcores = 0 if len(workers) >= cores else cores - len(workers)
+	for i in range(newcores):
 		worker = Worker(shell)
 		worker.start()
 		workers.append(worker)
