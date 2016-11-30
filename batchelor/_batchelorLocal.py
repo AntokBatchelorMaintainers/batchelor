@@ -37,12 +37,11 @@ class Worker(threading.Thread):
 						continue
 
 			with guard:
-				for i in range(len(jobs)):
-					if jobs[i].jobId == jobId:
-						break
-				if jobs[i].jobId != jobId:
-					continue # might actually happen if a
-					         # job is deleted
+				knownJobIds = [ job.jobId for job in jobs ]
+				if not jobId in knownJobIds:
+					# might actually happen if a job is deleted
+					continue
+				i = knownJobIds.index(jobId)
 				jobs[i].running = True
 				outputFile = jobs[i].outputFile
 				command = jobs[i].command
@@ -56,11 +55,10 @@ class Worker(threading.Thread):
 
 			os.unlink(cmdFile.name)
 			with guard:
-				for i in range(len(jobs)):
-					if jobs[i].jobId == jobId:
-						break
-				if jobs[i].jobId != jobId:
+				knownJobIds = [ job.jobId for job in jobs ]
+				if not jobId in knownJobIds:
 					raise batchelor.BatchelorException("Job ID {0} finished, but already removed from list of jobs.".format(jobId))
+				i = knownJobIds.index(jobId)
 				del jobs[i]
 			queue.task_done()
 
@@ -79,7 +77,12 @@ def initialize(config):
 
 	shell = config.get(submoduleIdentifier(), "shell")
 
-	for i in range(cores):
+	# in case the 'initialize' function of batchelor is called multiple
+	# times, the number of workers might pile up, so only make sure that
+	# the number of existing workers is equal to the current desired
+	# setting.
+	newcores = 0 if len(workers) >= cores else cores - len(workers)
+	for i in range(newcores):
 		worker = Worker(shell)
 		worker.start()
 		workers.append(worker)
@@ -158,11 +161,10 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	for jobId in jobIds:
 		with guard:
-			for i in range(len(jobs)):
-				if jobs[i].jobId == jobId:
-					break
-			if jobs[i].jobId != jobId:
+			knownJobIds = [ job.jobId for job in jobs ]
+			if not jobId in knownJobIds:
 				continue
+			i = knownJobIds.index(jobId)
 			if jobs[i].running == True:
 				continue
 			del jobs[i]
