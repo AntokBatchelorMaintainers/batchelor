@@ -2,6 +2,7 @@
 import ConfigParser
 import os.path
 import subprocess
+import inspect
 
 
 class BatchelorException(Exception):
@@ -209,7 +210,7 @@ class Batchelor:
 					_checkForSpecialCharacters(jobs[i][2])
 				elif len(jobs[i]) == 2:
 					# the 'submitJob' method of the 'Batchelor' class
-					# has a default argument for the job name, do 
+					# has a default argument for the job name, do
 					# something similar here
 					jobs[i].append(None)
 				else:
@@ -225,12 +226,42 @@ class Batchelor:
 				jobIds.append(jobId)
 			return jobIds
 
+	def submitArrayJob(self, command, outputFile, arrayStart, arrayEnd, arrayStep = 1, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		try:
+			arrayStart = int(arrayStart)
+			arrayEnd = int(arrayEnd)
+			arrayStep = int(arrayStep)
+		except ValueError:
+			raise BatchelorException('one of the job array parameters is non-integer')
+		if arrayEnd < arrayStart:
+			raise BatchelorException('last job number in array is bigger than the first')
+		if "submitJob" in self.batchFunctions.__dict__.keys():
+			if "arrayStart" in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+				_checkForSpecialCharacters(jobName)
+				return self.batchFunctions.submitJob(self._config, command, outputFile, jobName,
+				                                     arrayStart, arrayEnd, arrayStep)
+			else:
+				raise BatchelorException("not implemented")
+		else:
+			raise BatchelorException("not implemented")
+
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "getListOfActiveJobs" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfActiveJobs(jobName)
+		else:
+			raise BatchelorException("not implemented")
+
+	def getExtendedListOfActiveJobs(self, jobName = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "getExtendedListOfActiveJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+			return self.batchFunctions.getExtendedListOfActiveJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
 
