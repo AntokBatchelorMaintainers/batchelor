@@ -26,7 +26,10 @@ def submoduleIdentifier():
 	return "simulator"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, wd=None):
+	if wd:
+		raise batchelor.BatchelorException("Choosing the working directory is not jet implemented for {0}".format(submoduleIdentifier()))
+
 	lifetimeString = config.get(submoduleIdentifier(), "lifetime")
 	lifetime = datetime.datetime.strptime(lifetimeString, "%H:%M:%S") - datetime.datetime(1900, 1, 1, 0, 0, 0)
 	jobFinishTime = datetime.datetime.now() + lifetime

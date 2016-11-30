@@ -12,7 +12,8 @@ def submoduleIdentifier():
 	return "lxplus"
 
 
-def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd = None, arrayStep = None):
+def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
+
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
@@ -27,6 +28,7 @@ def submitJob(config, command, outputFile, jobName, arrayStart = None, arrayEnd 
 	cmnd += "-o " + outputFile + " "
 	cmnd += "-q " + config.get(submoduleIdentifier(), "queue") + " "
 	cmnd += "-R '"
+	cmnd += "-cwd '{0}'".format(wd) if wd else ""
 	cmnd += " select[type=" + config.get(submoduleIdentifier(), "type") + "]"
 	cmnd += " rusage[pool=" + config.get(submoduleIdentifier(), "pool") + "]"
 	try:

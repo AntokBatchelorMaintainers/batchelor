@@ -7,6 +7,7 @@ import tempfile
 import threading
 
 import batchelor
+from _job import JobStatus
 
 
 class Job:
@@ -101,7 +102,10 @@ def submoduleIdentifier():
 	return "local"
 
 
-def submitJob(config, command, outputFile, jobName):
+def submitJob(config, command, outputFile, jobName, wd = None):
+	if wd:
+		command = "cd '{0}'; {1}".format(wd, command)
+
 	with guard:
 		aux[0] += 1
 		jobId = aux[0]
@@ -169,3 +173,14 @@ def deleteJobs(jobIds):
 				continue
 			del jobs[i]
 	return True
+
+
+def getListOfJobStates(jobIds, username):
+	jobStates = []
+
+	with guard:
+		for i in range(len(jobs)):
+			if not jobIds or jobs[i].jobId in jobIds:
+				jobStates.append(JobStatus(jobs[i].jobId, JobStatus.kRunning if jobs[i].running else JobStatus.kWaiting))
+
+	return jobStates
