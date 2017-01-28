@@ -63,6 +63,8 @@ def detectSystem():
 		return "lyon"
 	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
 		return "c2pap"
+	elif hostname.startswith("lxa") and runCommand("which sbatch")[0] == 0:
+		return "lrz"
 	return "UNKNOWN"
 
 
@@ -178,6 +180,8 @@ class Batchelor:
 			batchFunctions.initialize(self._config)
 		elif self._system == "simulator":
 			import batchelor._batchelorSimulator as batchFunctions
+		elif self._system == "lrz":
+			import batchelor._batchelorLRZ as batchFunctions
 		else:
 			self.bprint("Unknown system '" + self._system + "', cannot load appropriate submodule. Initialization failed...")
 			return False
@@ -214,7 +218,7 @@ class Batchelor:
 				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
 					raise BatchelorException("Priority not implemented")
 				kwargs['priority'] = priority
-					
+
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
 			raise BatchelorException("not implemented")
@@ -235,7 +239,7 @@ class Batchelor:
 					_checkForSpecialCharacters(jobs[i][2])
 				elif len(jobs[i]) == 2:
 					# the 'submitJob' method of the 'Batchelor' class
-					# has a default argument for the job name, do 
+					# has a default argument for the job name, do
 					# something similar here
 					jobs[i].append(None)
 				else:
@@ -285,7 +289,7 @@ class Batchelor:
 			return self.batchFunctions.getListOfErrorJobs(jobName)
 		else:
 			raise BatchelorException("not implemented")
-		
+
 	def getListOfWaitingJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
@@ -329,7 +333,7 @@ class Batchelor:
 			return self.batchFunctions.deleteJobs(jobIds)
 		else:
 			raise BatchelorException("not implemented")
-		
+
 	def getListOfJobStates(self, jobIDs = None, username = None):
 		'''
 		Get the job stats of all jobs
@@ -349,70 +353,70 @@ class Batchelor:
 
 class BatchelorHandler(Batchelor):
 	'''
-		Specialization of the Batchelor class 
+		Specialization of the Batchelor class
 		to also handle running jobs
 	'''
-	
+
 	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0, check_job_success = False, store_commands = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
 		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...).
-		@param n_threads: Number of threads for local processing. 
+		@param n_threads: Number of threads for local processing.
 		@param memory: Set used memory per job.
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
 		'''
-		
+
 		Batchelor.__init__(self)
 		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
-		
+
 		if memory:
 			for section in self._config.sections():
 				if "memory" in [ e[0] for e in self._config.items(section)]:
 					self._config.set(section, "memory", memory)
 		if systemOverride == "local" and n_threads:
 			self._config.set("local","cores", n_threads);
-		
+
 		self._submittedJobs = []
 		self._commands = []
 		self._logfiles = []
 		self._check_job_success = check_job_success
 		self._store_commands = store_commands
 		self._store_commands_filename = ""
-		
+
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
 			if os.path.isdir(self._store_commands):
 				self._store_commands_filename = os.path.join(self._store_commands, self._store_commands_filename)
-			else: 
+			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
 
 	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
 		'''
 		Submit job with the given command
-		
+
 		@param command: Command to be executed
 		@param wd: Working directory. Default = current workingdirectory
-		@param output: Path or directory of log files. If not given, but check_job_success is selected, a .log folder will be created in the wd 
+		@param output: Path or directory of log files. If not given, but check_job_success is selected, a .log folder will be created in the wd
 		@param jobName: Name of the submitted job. Default='Batchelor'
-		
+
 		@return: jobID
 		'''
 		if not jobName:
 			jobName = 'Batchelor'
 		if not wd:
 			wd = os.getcwd()
-			
+
 		if output == '/dev/null' and self._check_job_success: # if not output file is given but the job success should be checked anyway
 			logdir = os.path.join(wd, '.log')
 			if not os.path.isdir(logdir):
 				os.makedirs( logdir )
 			output = tempfile.mktemp(prefix = time.strftime("%Y-%m-%d_%H-%M-%S_"),suffix = '.log', dir = logdir)
-			
+
 		if self._check_job_success:
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
-			
+
 
 		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority)
 
@@ -420,35 +424,35 @@ class BatchelorHandler(Batchelor):
 			self._submittedJobs.append(jid)
 			self._commands.append( command )
 			self._logfiles.append( output )
-			
+
 			if self._store_commands:
 				with open(self._store_commands_filename, 'a') as fout:
 					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority}
 					submit = {jid:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
-				
+
 		return jid;
-			
-		
+
+
 	def getListOfSubmittedActiveJobs(self, jobName=None):
 		'''
 		Get list of all running jobs, which have been submitted by this instance
 		@return: List of running jobs
 		'''
-		
+
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
-	
-	
+
+
 	def wait(self, timeout = 10, jobName = None, catch_SIGINT=True):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
-		
+
 		@param timeout: Timeout in seconds between checking the joblist
 		@param jobName: Only wait for jobs with the given job-name
 		'''
-		
+
 		def finish(signal, frame):
-			print 
+			print
 			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
 				print "stopping all jobs and shutting down batchelor..."
 				self.deleteJobs( self.getListOfSubmittedActiveJobs())
@@ -458,26 +462,26 @@ class BatchelorHandler(Batchelor):
 				raise CancelException( "Catched Ctrl+C" );
 			else:
 				print "continuing.."
-			
+
 		if catch_SIGINT:
 			signal.signal( signal.SIGINT, finish)
-		
+
 		running_jobs = self.getListOfSubmittedActiveJobs(jobName)
 		while running_jobs:
 			if self.debug:
 				print "Waiting for jobs:", running_jobs;
 			time.sleep(timeout)
 			running_jobs = self.getListOfSubmittedActiveJobs(jobName)
-			
-			
+
+
 		return;
 
-			
+
 	def checkJobStates(self, verbose=True):
 		if not self._check_job_success:
 			print "Called checkJobStates, but Batchelor was not configured to check job states"
 			return False
-		
+
 		error_ids = []
 		error_logfiles = []
 		for i_job, log_file in enumerate( self._logfiles ):
@@ -487,7 +491,7 @@ class BatchelorHandler(Batchelor):
 					found = True
 					break
 				time.sleep(6)
-			if not found:		
+			if not found:
 				if verbose:
 					if not error_ids: # first found error
 						print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -506,14 +510,14 @@ class BatchelorHandler(Batchelor):
 							print "\tfor command:'{0}'".format(self._commands[i_job])
 						error_ids.append( self._submittedJobs[i_job])
 						error_logfiles.append(log_file)
-		
+
 		return error_ids, error_logfiles;
 
 	def resubmitStoredJobs(self, jobs_filename, jobids_to_submit = None):
 		'''
-		@param jobids_to_submitparam: If not given, all jobs are resubmitted 
+		@param jobids_to_submitparam: If not given, all jobs are resubmitted
 		@return ids of resubmitted jobs {old_jobid: new_jobid}
-		''' 
+		'''
 		jobs = []
 		with open(jobs_filename) as fin:
 			while True:
@@ -524,10 +528,10 @@ class BatchelorHandler(Batchelor):
 					break;
 		# change to dictionary
 		jobs = { j.keys()[0]: j.values()[0] for j in jobs }	
-		
+
 		if not jobids_to_submit:
 			jobids_to_submit = sorted(jobs.keys());
-			
+
 		key_type = type(jobs.keys()[0])
 		new_jobids = {}
 		for jid in jobids_to_submit:
@@ -546,8 +550,5 @@ class BatchelorHandler(Batchelor):
 				print "\t{0}: {1}".format(k, jobs[jid][k])
 			new_jid = self.submitJob( **jobs[jid] )
 			new_jobids[jid] = new_jid
-			
+
 		return new_jobids
-			
-		
-			
