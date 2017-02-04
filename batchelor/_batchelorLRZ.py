@@ -145,7 +145,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 			currentJobStatus.setStatus(JobStatus.kUnknown, name = status)
 			if status == 'RUNNING':
 				currentJobStatus.setStatus(JobStatus.kRunning)
-			elif status == 'PENDING' or status == 'SUSPENDED,' or status == 'COMPLETING' or status == 'COMPLETED':
+			elif status == 'PENDING' or status == 'SUSPENDED,' or status == 'COMPLETING' or status == 'COMPLETED' or status == 'COMPLETI':
 				currentJobStatus.setStatus(JobStatus.kWaiting)
 			elif status == 'CANCELLED' or status == 'FAILED' or status == 'TIMEOUT' or status == 'NODE_FAIL':
 				currentJobStatus.setStatus(JobStatus.kError)

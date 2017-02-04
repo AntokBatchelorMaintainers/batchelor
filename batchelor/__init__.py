@@ -63,7 +63,7 @@ def detectSystem():
 		return "lyon"
 	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
 		return "c2pap"
-	elif hostname.startswith("lxa") and runCommand("which sbatch")[0] == 0:
+	elif hostname.endswith("lrz.de") and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
