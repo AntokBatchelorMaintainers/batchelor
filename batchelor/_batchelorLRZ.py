@@ -153,19 +153,23 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				print "Unknown job status", status
 
 			# time
-			time_str = lineSplit[5].split(':')
+			time_str = lineSplit[5]
 			try:
-
+				hours = 0.0
+				if '-' in time_str:
+					time_str = time_str.split('-')
+					hours += float(time_str[0])*24
+					time_str = time_str[1].split(':')
+				else:
+					time_str = time_str.split(':')
 				seconds = float(time_str[-1])
 				minuts = float(time_str[-2])
 				if(len(time_str) > 2):
-					hours = float(time_str[-3])
-				else:
-					hours = 0.0
+					hours += float(time_str[-3])
 				total_time = hours + minuts / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:
-				raise batchelor.BatchelorException("parsing of squeue output to get time information failed.")
+				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[5]))
 		except ValueError:
 			raise batchelor.BatchelorException("parsing of squeue output to get job id failed.")
 
