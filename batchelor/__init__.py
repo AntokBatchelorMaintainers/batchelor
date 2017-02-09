@@ -7,6 +7,7 @@ import signal
 import tempfile
 import inspect
 import pickle
+import sys
 
 import _job
 
@@ -104,12 +105,14 @@ def checkConfig(configFileName, system = ""):
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
+	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "maxActiveJobs" ],
 	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
 	                "c2pap": [ "header_file" ],
+	                "lrz": [ "header_file" ],
 	                "local": [ "shell" ] }
 	for section in requiredOptions.keys():
 		if config.has_section(section):
@@ -392,7 +395,7 @@ class BatchelorHandler(Batchelor):
 			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
 
-	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
+	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None, waitFreeSlotsMax = None):
 		'''
 		Submit job with the given command
 
@@ -400,6 +403,7 @@ class BatchelorHandler(Batchelor):
 		@param wd: Working directory. Default = current workingdirectory
 		@param output: Path or directory of log files. If not given, but check_job_success is selected, a .log folder will be created in the wd
 		@param jobName: Name of the submitted job. Default='Batchelor'
+		@param waitFreeSlotsMax: Number of seconds to wait maximal for a free slot if the system has a maxActiveJobs
 
 		@return: jobID
 		'''
@@ -417,6 +421,23 @@ class BatchelorHandler(Batchelor):
 		if self._check_job_success:
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
 
+		# check if only a certain amount of active jobs is allowd
+		if self._config.has_option(self._system, "maxActiveJobs"):
+			maxActiveJobs = int( self._config.get(self._system, "maxActiveJobs"))
+			i=0;
+			waitTime = 90
+			while True:
+				if i == 0:
+					sys.stdout.write("Waiting for free slots")
+					sys.stdout.flush()
+				if len(self.getListOfActiveJobs()) < maxActiveJobs:
+					break
+				time.sleep(waitTime); # wate 1.5  min
+				i+=1
+				if waitFreeSlotsMax != None and i*waitTime > waitFreeSlotsMax:
+					break
+					# raise BatchelorException("Could not  submit job because no free slot is available and the maximal wait time for a free slot is reached.")
+			sys.stdout.write("\r")
 
 		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority)
 
@@ -443,7 +464,7 @@ class BatchelorHandler(Batchelor):
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
 
 
-	def wait(self, timeout = 10, jobName = None, catch_SIGINT=True):
+	def wait(self, timeout = 60, jobName = None, catch_SIGINT=True):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
 
