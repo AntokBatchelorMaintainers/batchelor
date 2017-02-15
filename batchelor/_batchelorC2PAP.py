@@ -26,6 +26,7 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 		tempFile.write("#!/bin/bash\n\n")
 		tempFile.write("#@ group = " + config.get(submoduleIdentifier(), "group") + "\n")
 		tempFile.write("#@ output = " + outputFile + "\n")
+		tempFile.write("#@ error = " + outputFile + "\n")
 		tempFile.write("#@ notification = " + config.get(submoduleIdentifier(), "notification") + "\n")
 		tempFile.write("#@ notify_user = " + config.get(submoduleIdentifier(), "notify_user") + "\n")
 		tempFile.write("#@ node_usage = " + config.get(submoduleIdentifier(), "node_usage") + "\n")
@@ -42,6 +43,8 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 					continue
 				tempFile.write(line)
 		tempFile.write("\n\n")
+		tempFile.write("exec 2>&1\n")
+		tempFile.write("\n")
 		tempFile.write(command)
 	cmnd = "llsubmit - < " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
