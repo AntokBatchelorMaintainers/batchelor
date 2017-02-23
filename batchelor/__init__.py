@@ -487,12 +487,18 @@ class BatchelorHandler(Batchelor):
 		if catch_SIGINT:
 			signal.signal( signal.SIGINT, finish)
 
-		running_jobs = self.getListOfSubmittedActiveJobs(jobName)
-		while running_jobs:
+		while True:
+			try:
+				running_jobs = self.getListOfSubmittedActiveJobs(jobName)
+			except BatchelorException as e:
+				print "Error when fetching running jobs"
+				print e
+				running_jobs = [-1] # dummy job to stay in the loop
+			if not running_jobs:
+				break
 			if self.debug:
 				print "Waiting for jobs:", running_jobs;
 			time.sleep(timeout)
-			running_jobs = self.getListOfSubmittedActiveJobs(jobName)
 
 
 		return;
