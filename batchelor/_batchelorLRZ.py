@@ -1,14 +1,14 @@
 
 import multiprocessing
 import os
+import sys
 import tempfile
+import time
 
 import batchelor
 from _job import JobStatus
 
 
-
-_kMemoryUnits = {'mb': 1.0 / 1024.0, 'm': 1.0 / 1024.0, 'gb': 1.0, 'g': 1.0}
 
 
 def submoduleIdentifier():
@@ -16,6 +16,21 @@ def submoduleIdentifier():
 
 
 def submitJob(config, command, outputFile, jobName, wd = None):
+	
+	
+	# check if only a certain amount of active jobs is allowd
+	if config.has_option(submoduleIdentifier(), "max_active_jobs"):
+		max_active_jobs = int(config.get(submoduleIdentifier(), "max_active_jobs"))
+		i=0;
+		waitTime = 90
+		while len(getListOfActiveJobs(None)) >= max_active_jobs:
+			if i == 0:
+				sys.stdout.write("Waiting for free slots")
+				sys.stdout.flush()
+			time.sleep(waitTime); # wait 1.5  min
+			i+=1
+		if i > 0:
+			sys.stdout.write("\r")
 
 	if wd == None:
 		wd = os.getcwd()
@@ -58,22 +73,6 @@ def _wrapSubmitJob(args):
 		return submitJob(*args)
 	except batchelor.BatchelorException as exc:
 		return -1
-
-
-def submitJobs(config, newJobs):
-	if len(newJobs) == 0:
-		return []
-
-	poolJobsArgs = []
-	for job in newJobs:
-		poolJobsArgs.append([config] + job)
-
-	pool = multiprocessing.Pool(processes = len(newJobs))
-	jobIds = pool.map(_wrapSubmitJob, poolJobsArgs, 1)
-	pool.close()
-	pool.join()
-
-	return jobIds
 
 
 def getListOfActiveJobs(jobName):
@@ -123,8 +122,6 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 		raise batchelor.BatchelorException("squeue failed (stderr: '" + stderr + "')")
 	jobList = []
 	jobStates = []
-	currentJobId = -1
-	currentJobStatus = None;
 	for line in stdout.split('\n'):
 		if line.startswith("CLUSTER: serial"):
 			continue;
@@ -163,10 +160,10 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				else:
 					time_str = time_str.split(':')
 				seconds = float(time_str[-1])
-				minuts = float(time_str[-2])
+				minutes = float(time_str[-2])
 				if(len(time_str) > 2):
 					hours += float(time_str[-3])
-				total_time = hours + minuts / 60.0 + seconds / 3600.0
+				total_time = hours + minutes / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:
 				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[5]))
