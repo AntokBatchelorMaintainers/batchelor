@@ -498,7 +498,7 @@ class BatchelorHandler(Batchelor):
 			else:
 				with open(log_file) as fin:
 					log_file_content = fin.read();
-					if "BatchelorStatus: ERROR\n" in log_file_content or not "BatchelorStatus: OK\n" in log_file_content:
+					if "BatchelorStatus: ERROR" in log_file_content or not "BatchelorStatus: OK\n" in log_file_content:
 						if verbose:
 							if not error_ids: # first found error
 								print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
