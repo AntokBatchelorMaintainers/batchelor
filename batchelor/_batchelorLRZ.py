@@ -23,7 +23,13 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 		max_active_jobs = int(config.get(submoduleIdentifier(), "max_active_jobs"))
 		i=0;
 		waitTime = 90
-		while len(getListOfActiveJobs(None)) >= max_active_jobs:
+		while True:
+			try:
+				nRunningJobs = len(getListOfActiveJobs(None))
+			except batchelorn.BatchelorException:
+				nRunningJobs = max_active_jobs
+			if nRunningJobs < max_active_jobs:
+				break
 			if i == 0:
 				sys.stdout.write("Waiting for free slots")
 				sys.stdout.flush()
