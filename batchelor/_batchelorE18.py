@@ -25,7 +25,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		raise batchelor.BatchelorException("The given output-file is in your home-folder which is no allowed at E18: '{0}'".format(outputFile))
 	
 	if priority:
-		priority = int(-1024 + 2048 * (priority+1.0)/2.0)
+		priority = max(int(-1024 + 2048 * (priority+1.0)/2.0), -1023) 
 	
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
