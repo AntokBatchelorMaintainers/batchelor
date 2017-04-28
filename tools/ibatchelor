@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+if [[ $# -ge 1 ]] && [[ "$1" == "--local" ]]; then
+	ipython -i $(dirname $0)/ibatchelor.py -- --local
+else
+	ipython -i $(dirname $0)/ibatchelor.py
+fi
