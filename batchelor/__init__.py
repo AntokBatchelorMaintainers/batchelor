@@ -360,13 +360,13 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = 0, check_job_success = False, store_commands = False):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
 		@param systemOverride: Manual selection of the execution system ('local', 'E18', ...).
 		@param n_threads: Number of threads for local processing.
-		@param memory: Set used memory per job.
+		@param memory: Set used memory per job (e.g. 500M).
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
 		'''
