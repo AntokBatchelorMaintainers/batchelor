@@ -1,4 +1,4 @@
 #!/bin/bash
 
-ipython -i $(dirname $0)/ibatchelor.py -- "$@"
+ipython -i $(dirname $(realpath $0))/ibatchelor.py -- "$@"
 
