@@ -1,6 +1,7 @@
 
 import multiprocessing
 import os
+import sys
 import Queue
 import subprocess
 import tempfile
@@ -18,6 +19,7 @@ class Job:
 		self.outputFile = outputFile
 		self.jobName = jobName
 		self.running = False
+		self.runningProcess = None
 
 
 class Worker(threading.Thread):
@@ -46,14 +48,18 @@ class Worker(threading.Thread):
 				jobs[i].running = True
 				outputFile = jobs[i].outputFile
 				command = jobs[i].command
-			cmdFile = tempfile.NamedTemporaryFile(delete = False)
-			for line in command:
-				cmdFile.write(line)
-			cmdFile.close()
+				cmdFile = tempfile.NamedTemporaryFile(delete = False)
+				for line in command:
+					cmdFile.write(line)
+				cmdFile.close()
+				
+				logFile = open(outputFile, "w")
+				p = subprocess.Popen([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
+				jobs[i].runningProcess = p
 
-			with open(outputFile, "w") as logFile:
-				subprocess.call([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
+			p.wait()
 
+			logFile.close()
 			os.unlink(cmdFile.name)
 			with guard:
 				knownJobIds = [ job.jobId for job in jobs ]
@@ -163,14 +169,15 @@ def deleteErrorJobs(jobName):
 
 
 def deleteJobs(jobIds):
-	for jobId in jobIds:
-		with guard:
+	with guard:
+		for jobId in jobIds:
 			knownJobIds = [ job.jobId for job in jobs ]
 			if not jobId in knownJobIds:
 				continue
 			i = knownJobIds.index(jobId)
 			if jobs[i].running == True:
-				continue
+				jobs[i].runningProcess.kill()
+				continue # need to continue, because the worker removes the job
 			del jobs[i]
 	return True
 

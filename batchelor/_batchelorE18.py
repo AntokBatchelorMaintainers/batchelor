@@ -16,17 +16,17 @@ def submoduleIdentifier():
 
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None):
-	
+
 	# some checks of the job-settings
 	if wd and os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
 		raise batchelor.BatchelorException("The given working-directory is in your home-folder which is no allowed at E18: '{0}'".format(wd))
 
 	if os.path.realpath(outputFile).count(os.path.realpath(os.path.expanduser('~'))):
 		raise batchelor.BatchelorException("The given output-file is in your home-folder which is no allowed at E18: '{0}'".format(outputFile))
-	
+
 	if priority:
-		priority = int(-1024 + 2048 * (priority+1.0)/2.0)
-	
+		priority = max(int(-1024 + 2048 * (priority+1.0)/2.0), -1023)
+
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
@@ -39,8 +39,8 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	cmnd += "" if jobName is None else ("-N " + jobName + " ")
 	if arrayStart is not None:
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
-	cmnd += "-o " + outputFile + " "
-	cmnd += "-wd " + ("/tmp/" if not wd else wd) + " "
+	cmnd += "-o '" + outputFile + "' "
+	cmnd += "-wd '" + ("/tmp/" if not wd else wd) + "' "
 	cmnd += "-l short=1 " if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
@@ -162,7 +162,7 @@ def getListOfWaitingJobs(jobName):
 		if lineList[4] == "qw":
 			listOfErrorJobs.append(jobId)
 	return listOfErrorJobs
-	
+
 def getListOfRunningJobs(jobName):
 	listOfActiveJobs = getListOfActiveJobs(jobName)
 	command = "qstat"
@@ -213,51 +213,51 @@ def deleteJobs(jobIds):
 
 
 def getListOfJobStates(select_jobIDs, username):
-	
-	
+
+
 	# get list of all jobs
 	if username == None:
 		command = "qstat"
 	else:
 		command = "qstat -u {0}".format(username)
-		
+
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	
+
 	if returncode != 0:
 		raise batchelor.BatchelorException("qstat failed (stderr: '" + stderr + "')")
-	
+
 	if stdout == "":
 		return []
 
 	jobList = stdout.split('\n')[2:]
-	
+
 	try:
 		jobIDs = [ int(job.split()[0]) for job in jobList ]
 		jobStates = [ job.split()[4] for job in jobList ];
 	except ValueError:
 		raise batchelor.BatchelorException("parsing of qstat output to get job id failed.")
-	
+
 	list_of_states = [];
-	
+
 	for i, jobID in enumerate(jobIDs):
 		if select_jobIDs == None or jobID in select_jobIDs:
 			job_status = JobStatus(jobID);
 			job_status.setStatus( JobStatus.kUnknown, name = jobStates[i] );
-			
+
 			if jobStates[i] == 'qw' or jobStates[i] == 'hqw':
 				job_status.setStatus( JobStatus.kWaiting );
-				
+
 			elif jobStates[i] == 't':
 				job_status.setStatus( JobStatus.kTransmitting )
-				
+
 			elif jobStates[i] == 'd' or jobStates[i] == 'dr' or jobStates[i] == 'dt':
 				job_status.setStatus( JobStatus.kDeletion)
-				
+
 			elif jobStates[i] == 'Eq':
 				job_status.setStatus( JobStatus.kError );
-				
+
 			elif jobStates[i] == 'r' or jobStates[i] == 'hr':
-				
+
 				# get detailed job information
 				command = "qstat -xml -j {0}".format(jobID);
 				(returncode, stdout, stderr) = batchelor.runCommand(command)
@@ -266,7 +266,7 @@ def getListOfJobStates(select_jobIDs, username):
 				elif 'unknown_jobs' in stdout:
 					continue; # the job has been ended between the qstat command and now
 				else:
-					try: 
+					try:
 						root = ElementTree.fromstring( stdout );
 						for child in root[0]:
 							for task in child.findall('JB_ja_tasks'):
@@ -285,25 +285,25 @@ def getListOfJobStates(select_jobIDs, username):
 													job_status.setMemoryUsage(float(value) / (1024.0)**3, task_number);
 					except xml.etree.ElementTree.ParseError as e:
 						raise batchelor.BatchelorException("xml-parser could not parse output of qstat -xml -j {0}: {1}".format(jobID, e))
-						
-					# end of parsing through the xml tree			
 
-				
-			
+					# end of parsing through the xml tree
+
+
+
 			list_of_states.append( job_status );
-			
-			
+
+
 		# end of if jobs belongs to the selected jobs
 	# end of loop over all jobs
-			
+
 	return list_of_states;
-				
-			
-		
-	
-		
-			
-		
+
+
+
+
+
+
+
 
 
 def _getExcludedHostsString(config):
