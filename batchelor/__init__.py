@@ -360,7 +360,7 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
@@ -369,6 +369,7 @@ class BatchelorHandler(Batchelor):
 		@param memory: Set used memory per job (e.g. 500M).
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
+		@param catchSIGINT: Catch SIGINT (Ctrl+C) and ask to stopp all jobs
 		'''
 
 		Batchelor.__init__(self)
@@ -394,6 +395,21 @@ class BatchelorHandler(Batchelor):
 				self._store_commands_filename = os.path.join(self._store_commands, self._store_commands_filename)
 			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
+
+		def finish(signal, frame):
+			print
+			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
+				print "stopping all jobs and shutting down batchelor..."
+				self.deleteJobs( self.getListOfSubmittedActiveJobs())
+				time.sleep(3);
+				self.shutdown()
+				print "Done"
+				raise CancelException( "Catched Ctrl+C" );
+			else:
+				print "continuing.."
+
+		if catchSIGINT:
+			signal.signal( signal.SIGINT, finish)
 
 	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
 		'''
@@ -454,20 +470,6 @@ class BatchelorHandler(Batchelor):
 		@param jobName: Only wait for jobs with the given job-name
 		'''
 
-		def finish(signal, frame):
-			print
-			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
-				print "stopping all jobs and shutting down batchelor..."
-				self.deleteJobs( self.getListOfSubmittedActiveJobs())
-				time.sleep(3);
-				self.shutdown()
-				print "Done"
-				raise CancelException( "Catched Ctrl+C" );
-			else:
-				print "continuing.."
-
-		if catch_SIGINT:
-			signal.signal( signal.SIGINT, finish)
 
 		while True:
 			try:
@@ -536,7 +538,7 @@ class BatchelorHandler(Batchelor):
 				except EOFError:
 					break;
 		# change to dictionary
-		jobs = { j.keys()[0]: j.values()[0] for j in jobs }	
+		jobs = { j.keys()[0]: j.values()[0] for j in jobs }
 
 		if not jobids_to_submit:
 			jobids_to_submit = sorted(jobs.keys());
