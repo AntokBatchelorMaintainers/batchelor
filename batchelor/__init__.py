@@ -107,7 +107,7 @@ def checkConfig(configFileName, system = ""):
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
 	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
-	                    "lxplus": [ "flavour", "header_file", "memory" ],
+	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lyon": [],
 	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
 	                    "local": [ "shell", "cores" ],

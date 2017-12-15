@@ -43,6 +43,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 			submitFile.write("error = {0}.err\n".format(outputFile))
 		submitFile.write("request_cpus  = 1\n")
 		submitFile.write("request_memory = {0}\n".format(config.get(submoduleIdentifier(), "memory")))
+		submitFile.write("request_disk = {0}\n".format(config.get(submoduleIdentifier(), "disk")))
 		submitFile.write("+JobFlavour = \"{0}\"\n".format(config.get(submoduleIdentifier(), "flavour")))
 		submitFile.write("queue 1\n")
 	cmnd = "condor_submit '{0}'".format(submitFileName)
