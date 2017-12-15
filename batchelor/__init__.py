@@ -28,13 +28,17 @@ class CancelException(Exception):
 		return repr(self.value)
 
 
-def runCommand(commandString):
+def runCommand(commandString,wd=None):
 	commandString = "errHandler() { (( errcount++ )); }; trap errHandler ERR\n" + commandString.rstrip('\n') + "\nexit $errcount"
+	kwargs = {}
+	if wd is not None:
+		kwargs['cwd'] = wd
 	process = subprocess.Popen(commandString,
 	                           shell=True,
 	                           stdout=subprocess.PIPE,
 	                           stderr=subprocess.PIPE,
-	                           executable="/bin/bash")
+	                           executable="/bin/bash",
+	                          **kwargs)
 	(stdout, stderr) = process.communicate()
 	if stdout:
 		stdout = stdout.rstrip(' \n')
@@ -103,7 +107,7 @@ def checkConfig(configFileName, system = ""):
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
 	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
-	                    "lxplus": [ "queue", "pool", "header_file" ],
+	                    "lxplus": [ "flavour", "header_file", "memory" ],
 	                    "lyon": [],
 	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
 	                    "local": [ "shell", "cores" ],
@@ -175,7 +179,7 @@ class Batchelor:
 		elif self._system == "e18":
 			import batchelor._batchelorE18 as batchFunctions
 		elif self._system == "lxplus":
-			import batchelor._batchelorLxplus as batchFunctions
+			import batchelor._batchelorLxplusCondor as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
 		elif self._system == "local":
