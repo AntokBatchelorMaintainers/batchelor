@@ -41,6 +41,8 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 			submitFile.write("output = {0}\n".format(outputFile))
 			submitFile.write("log = {0}.condor\n".format(outputFile))
 			submitFile.write("error = {0}.err\n".format(outputFile))
+
+		submitFile.write("should_transfer_files = NO\n") # Disable file transport
 		submitFile.write("request_cpus  = 1\n")
 		submitFile.write("request_memory = {0}\n".format(config.get(submoduleIdentifier(), "memory")))
 		submitFile.write("request_disk = {0}\n".format(config.get(submoduleIdentifier(), "disk")))
