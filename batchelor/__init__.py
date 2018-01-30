@@ -205,22 +205,29 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumthreads=None):
 		'''
 		@param priority: Job priority [-1.0, 1.0]
+		@param ompNumthreads: Number of threads requested.
+		                      Sets OMP_NUM_THREADS before the command and requires ompNumthreads slots.
 		'''
 		kwargs = {}
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
-			if priority != None:
+			if priority is not None:
 				priority = float(priority)
 				if priority < -1.0 or priority > 1.0:
 					raise BaseException("Priority must be within [-1.0, 1.0]")
 				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
 					raise BatchelorException("Priority not implemented")
 				kwargs['priority'] = priority
+			if ompNumthreads is not None:
+				ompNumthreads = int(ompNumthreads)
+				if not 'ompNumthreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+					raise BatchelorException("ompNumthreads not implemented")
+				kwargs['ompNumthreads'] = ompNumthreads
 
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
@@ -411,7 +418,7 @@ class BatchelorHandler(Batchelor):
 		if catchSIGINT:
 			signal.signal( signal.SIGINT, finish)
 
-	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
+	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None, ompNumThreads = None):
 		'''
 		Submit job with the given command
 
@@ -437,7 +444,7 @@ class BatchelorHandler(Batchelor):
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
 
 
-		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority)
+		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
 
 		if jid:
 			self._submittedJobs.append(jid)
@@ -446,7 +453,7 @@ class BatchelorHandler(Batchelor):
 
 			if self._store_commands:
 				with open(self._store_commands_filename, 'a') as fout:
-					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority}
+					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority, 'ompNumThreads': ompNumThreads}
 					submit = {jid:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
 

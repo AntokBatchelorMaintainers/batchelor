@@ -15,7 +15,7 @@ def submoduleIdentifier():
 	return "e18"
 
 
-def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None):
+def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None, ompNumThreads=None):
 
 	# some checks of the job-settings
 	if wd and os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
@@ -31,6 +31,8 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	os.close(fileDescriptor)
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + fileName)
 	with open(fileName, 'a') as scriptFile:
+		if ompNumThreads is not None:
+			scriptFile.write("export OMP_NUM_THREADS={0}\n".format(ompNumThreads))
 		scriptFile.write(command)
 	cmnd = "qsub "
 	cmnd += "-j y "
@@ -46,6 +48,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)
 	cmnd += "-p {0} ".format(priority) if priority else ""
+	cmnd += "-pe mt {0} ".format(ompNumThreads) if ompNumThreads is not None else ""
 	cmnd += "< " + fileName
 	(returncode, stdout, stderr) = batchelor.runCommand(cmnd)
 	if returncode != 0:
