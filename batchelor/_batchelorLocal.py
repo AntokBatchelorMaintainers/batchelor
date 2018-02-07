@@ -176,7 +176,7 @@ def deleteJobs(jobIds):
 				continue
 			i = knownJobIds.index(jobId)
 			if jobs[i].running == True:
-				jobs[i].runningProcess.kill()
+				os.killpg(os.getpgid(jobs[i].runningProcess.pid), subprocess.signal.SIGTERM)
 				continue # need to continue, because the worker removes the job
 			del jobs[i]
 	return True
