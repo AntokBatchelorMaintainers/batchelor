@@ -96,12 +96,19 @@ def initialize(config):
 
 
 def shutdown():
+	global workers
+	global aux
+	global jobs
 	# signal processes to stop after all jobs have been finished from queue
 	with guard:
 		aux[1] = True
 
 	for worker in workers:
 		worker.join()
+
+	workers = []
+	jobs = []
+	aux = [0, False]
 
 
 def submoduleIdentifier():
