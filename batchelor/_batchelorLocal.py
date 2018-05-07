@@ -96,12 +96,19 @@ def initialize(config):
 
 
 def shutdown():
+	global workers
+	global aux
+	global jobs
 	# signal processes to stop after all jobs have been finished from queue
 	with guard:
 		aux[1] = True
 
 	for worker in workers:
 		worker.join()
+
+	workers = []
+	jobs = []
+	aux = [0, False]
 
 
 def submoduleIdentifier():
@@ -176,7 +183,7 @@ def deleteJobs(jobIds):
 				continue
 			i = knownJobIds.index(jobId)
 			if jobs[i].running == True:
-				jobs[i].runningProcess.kill()
+				os.killpg(os.getpgid(jobs[i].runningProcess.pid), subprocess.signal.SIGTERM)
 				continue # need to continue, because the worker removes the job
 			del jobs[i]
 	return True

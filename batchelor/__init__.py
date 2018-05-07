@@ -28,13 +28,17 @@ class CancelException(Exception):
 		return repr(self.value)
 
 
-def runCommand(commandString):
+def runCommand(commandString,wd=None):
 	commandString = "errHandler() { (( errcount++ )); }; trap errHandler ERR\n" + commandString.rstrip('\n') + "\nexit $errcount"
+	kwargs = {}
+	if wd is not None:
+		kwargs['cwd'] = wd
 	process = subprocess.Popen(commandString,
 	                           shell=True,
 	                           stdout=subprocess.PIPE,
 	                           stderr=subprocess.PIPE,
-	                           executable="/bin/bash")
+	                           executable="/bin/bash",
+	                          **kwargs)
 	(stdout, stderr) = process.communicate()
 	if stdout:
 		stdout = stdout.rstrip(' \n')
@@ -103,7 +107,7 @@ def checkConfig(configFileName, system = ""):
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
 	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
-	                    "lxplus": [ "queue", "pool", "header_file" ],
+	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lyon": [],
 	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
 	                    "local": [ "shell", "cores" ],
@@ -175,7 +179,7 @@ class Batchelor:
 		elif self._system == "e18":
 			import batchelor._batchelorE18 as batchFunctions
 		elif self._system == "lxplus":
-			import batchelor._batchelorLxplus as batchFunctions
+			import batchelor._batchelorLxplusCondor as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
 		elif self._system == "local":
@@ -205,22 +209,29 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumthreads=None):
 		'''
 		@param priority: Job priority [-1.0, 1.0]
+		@param ompNumthreads: Number of threads requested.
+		                      Sets OMP_NUM_THREADS before the command and requires ompNumthreads slots.
 		'''
 		kwargs = {}
 		if not self.initialized():
 			raise BatchelorException("not initialized")
 		if "submitJob" in self.batchFunctions.__dict__.keys():
 			_checkForSpecialCharacters(jobName)
-			if priority != None:
+			if priority is not None:
 				priority = float(priority)
 				if priority < -1.0 or priority > 1.0:
 					raise BaseException("Priority must be within [-1.0, 1.0]")
 				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
 					raise BatchelorException("Priority not implemented")
 				kwargs['priority'] = priority
+			if ompNumthreads is not None:
+				ompNumthreads = int(ompNumthreads)
+				if not 'ompNumthreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+					raise BatchelorException("ompNumthreads not implemented")
+				kwargs['ompNumthreads'] = ompNumthreads
 
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
@@ -360,7 +371,7 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
@@ -369,6 +380,7 @@ class BatchelorHandler(Batchelor):
 		@param memory: Set used memory per job (e.g. 500M).
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
+		@param catchSIGINT: Catch SIGINT (Ctrl+C) and ask to stopp all jobs
 		'''
 
 		Batchelor.__init__(self)
@@ -395,7 +407,22 @@ class BatchelorHandler(Batchelor):
 			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
 
-	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None):
+		def finish(signal, frame):
+			print
+			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
+				print "stopping all jobs and shutting down batchelor..."
+				self.deleteJobs( self.getListOfSubmittedActiveJobs())
+				time.sleep(3);
+				self.shutdown()
+				print "Done"
+				raise CancelException( "Catched Ctrl+C" );
+			else:
+				print "continuing.."
+
+		if catchSIGINT:
+			signal.signal( signal.SIGINT, finish)
+
+	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None, ompNumThreads = None):
 		'''
 		Submit job with the given command
 
@@ -421,7 +448,7 @@ class BatchelorHandler(Batchelor):
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
 
 
-		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority)
+		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
 
 		if jid:
 			self._submittedJobs.append(jid)
@@ -430,7 +457,7 @@ class BatchelorHandler(Batchelor):
 
 			if self._store_commands:
 				with open(self._store_commands_filename, 'a') as fout:
-					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority}
+					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority, 'ompNumThreads': ompNumThreads}
 					submit = {jid:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
 
@@ -454,20 +481,6 @@ class BatchelorHandler(Batchelor):
 		@param jobName: Only wait for jobs with the given job-name
 		'''
 
-		def finish(signal, frame):
-			print
-			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
-				print "stopping all jobs and shutting down batchelor..."
-				self.deleteJobs( self.getListOfSubmittedActiveJobs())
-				time.sleep(3);
-				self.shutdown()
-				print "Done"
-				raise CancelException( "Catched Ctrl+C" );
-			else:
-				print "continuing.."
-
-		if catch_SIGINT:
-			signal.signal( signal.SIGINT, finish)
 
 		while True:
 			try:
@@ -536,7 +549,7 @@ class BatchelorHandler(Batchelor):
 				except EOFError:
 					break;
 		# change to dictionary
-		jobs = { j.keys()[0]: j.values()[0] for j in jobs }	
+		jobs = { j.keys()[0]: j.values()[0] for j in jobs }
 
 		if not jobids_to_submit:
 			jobids_to_submit = sorted(jobs.keys());
