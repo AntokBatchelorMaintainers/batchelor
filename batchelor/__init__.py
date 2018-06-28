@@ -61,7 +61,7 @@ def detectSystem():
 	elif hostname == "compass-kit.gridka.de":
 		return "gridka"
 	elif hostname.startswith("lxplus") or hostname.endswith(".cern.ch"):
-		return "lxplus"
+		return "lxplusLSF"
 	elif hostname.endswith(".e18.physik.tu-muenchen.de"):
 		return "e18"
 	elif hostname.startswith("ccage"):
@@ -108,6 +108,7 @@ def checkConfig(configFileName, system = ""):
 	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
+	                    "lxplusLSF": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
 	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
 	                    "local": [ "shell", "cores" ],
@@ -115,6 +116,7 @@ def checkConfig(configFileName, system = ""):
 	filesToTest = { "gridka": [ "header_file" ],
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
+	                "lxplusLSF": [ "header_file" ],
 	                "c2pap": [ "header_file" ],
 	                "lrz": [ "header_file" ],
 	                "local": [ "shell" ] }
@@ -180,6 +182,8 @@ class Batchelor:
 			import batchelor._batchelorE18 as batchFunctions
 		elif self._system == "lxplus":
 			import batchelor._batchelorLxplusCondor as batchFunctions
+		elif self._system == "lxplusLSF":
+			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
 		elif self._system == "local":

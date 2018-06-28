@@ -9,7 +9,7 @@ import batchelor
 
 
 def submoduleIdentifier():
-	return "lxplus"
+	return "lxplusLSF"
 
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
