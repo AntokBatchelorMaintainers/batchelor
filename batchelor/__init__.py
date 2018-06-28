@@ -8,6 +8,7 @@ import tempfile
 import inspect
 import pickle
 import sys
+import re
 
 import _job
 
@@ -526,18 +527,28 @@ class BatchelorHandler(Batchelor):
 				error_ids.append( self._submittedJobs[i_job])
 				error_logfiles.append(log_file)
 			else:
-				with open(log_file) as fin:
-					log_file_content = fin.read();
-					if "BatchelorStatus: ERROR" in log_file_content or not "BatchelorStatus: OK\n" in log_file_content:
-						if verbose:
-							if not error_ids: # first found error
-								print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-							print "Error in logfile '{0}'".format(log_file)
-							print "\tfor command:'{0}'".format(self._commands[i_job])
-						error_ids.append( self._submittedJobs[i_job])
-						error_logfiles.append(log_file)
+				if not self._checkJobStatus(log_file):
+					if verbose:
+						if not error_ids: # first found error
+							print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+						print "Error in logfile '{0}'".format(log_file)
+						print "\tfor command:'{0}'".format(self._commands[i_job])
+					error_ids.append( self._submittedJobs[i_job])
+					error_logfiles.append(log_file)
 
 		return error_ids, error_logfiles;
+
+	def _checkJobStatus(self, log_file):
+		foundOK = False
+		foundERROR = False
+		with open(log_file) as fin:
+			for line in fin:
+				if re.match(r"^BatchelorStatus: OK$", line):
+					foundOK = True
+				if re.match(r"^BatchelorStatus: ERROR", line):
+					foundERROR = True
+		return not (foundERROR or not foundOK)
+
 
 	def resubmitStoredJobs(self, jobs_filename, jobids_to_submit = None):
 		'''
