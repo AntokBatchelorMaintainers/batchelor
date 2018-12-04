@@ -388,15 +388,18 @@ class BatchelorHandler(Batchelor):
 		@param catchSIGINT: Catch SIGINT (Ctrl+C) and ask to stopp all jobs
 		'''
 
+
 		Batchelor.__init__(self)
-		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
+
+		if systemOverride == "local" and n_threads >= 0:
+			self._config.set("local","cores", n_threads);
 
 		if memory:
 			for section in self._config.sections():
 				if "memory" in [ e[0] for e in self._config.items(section)]:
 					self._config.set(section, "memory", memory)
-		if systemOverride == "local" and n_threads:
-			self._config.set("local","cores", n_threads);
+
+		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
 
 		self._submittedJobs = []
 		self._commands = []
