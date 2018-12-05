@@ -391,6 +391,8 @@ class BatchelorHandler(Batchelor):
 
 		Batchelor.__init__(self)
 
+		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
+
 		if systemOverride == "local" and n_threads >= 0:
 			self._config.set("local","cores", n_threads);
 
@@ -399,7 +401,6 @@ class BatchelorHandler(Batchelor):
 				if "memory" in [ e[0] for e in self._config.items(section)]:
 					self._config.set(section, "memory", memory)
 
-		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
 
 		self._submittedJobs = []
 		self._commands = []
@@ -410,7 +411,7 @@ class BatchelorHandler(Batchelor):
 
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
-			if os.path.isdir(self._store_commands):
+			if isinstance(self._store_commands, str) and os.path.isdir(self._store_commands):
 				self._store_commands_filename = os.path.join(self._store_commands, self._store_commands_filename)
 			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)

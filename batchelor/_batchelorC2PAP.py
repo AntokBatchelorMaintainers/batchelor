@@ -129,12 +129,12 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	if not jobIds:
 		return True
-	command = "llcancel"
 	for jobId in jobIds:
+		command = "llcancel"
 		command += " mgmt." + str(jobId)
-	(returncode, stdout, stderr) = batchelor.runCommand(command)
-	if returncode != 0:
-		raise batchelor.BatchelorException("llcancel failed (stderr: '" + stderr + "')")
+		(returncode, stdout, stderr) = batchelor.runCommand(command)
+		if returncode != 0:
+			raise batchelor.BatchelorException("llcancel failed (stderr: '" + stderr + "')")
 	return True
 
 
