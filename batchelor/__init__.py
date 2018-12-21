@@ -106,7 +106,7 @@ def checkConfig(configFileName, system = ""):
 		print("ERROR: System set but corresponding section is missing in config file.")
 		error = True
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
-	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
+	                    "e18": [ "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lxplusLSF": [ "queue", "pool", "header_file" ],

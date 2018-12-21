@@ -43,7 +43,12 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o '" + outputFile + "' "
 	cmnd += "-wd '" + ("/tmp/" if not wd else wd) + "' "
-	cmnd += "-l short=1 " if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
+	if config.has_option(submoduleIdentifier(), "shortqueue") and config.get(submoduleIdentifier(), "shortqueue") in [1, "1", "TRUE", "true", "True"]:
+		cmnd += "-l short=1 "
+	elif config.has_option(submoduleIdentifier(), "longqueue") and config.get(submoduleIdentifier(), "longqueue") in [1, "1", "TRUE", "true", "True"]:
+		cmnd += "-l long=1 "
+	else:
+		cmnd += "-l medium=1 "
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)
