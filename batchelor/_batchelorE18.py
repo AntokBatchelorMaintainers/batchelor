@@ -17,6 +17,14 @@ def submoduleIdentifier():
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None, ompNumThreads=None):
 
+        # Handling for previous queue option
+        queues = {"short" : "short=1 ", "medium" : "medium=1 ", "long" : "long=1"}
+        if config.has_option(submoduleIdentifier(), "queue"):
+                queueOption = "queue"
+        else:
+                queueOption = "shortqueue"
+                queues.update({"1" : "short=1", "true" : "short=1", "0" : "medium=1", "false" : "medium=1"})
+
 	# some checks of the job-settings
 	if wd and os.path.realpath(wd).count(os.path.realpath(os.path.expanduser('~'))):
 		raise batchelor.BatchelorException("The given working-directory is in your home-folder which is no allowed at E18: '{0}'".format(wd))
@@ -43,7 +51,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o '" + outputFile + "' "
 	cmnd += "-wd '" + ("/tmp/" if not wd else wd) + "' "
-	cmnd += "-l short=1 " if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
+        cmnd += "-l " + queues[config.get(submoduleIdentifier(), queueOption).lower()] + " "
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)

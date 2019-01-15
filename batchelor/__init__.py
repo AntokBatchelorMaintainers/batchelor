@@ -105,7 +105,7 @@ def checkConfig(configFileName, system = ""):
 		print("ERROR: System set but corresponding section is missing in config file.")
 		error = True
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
-	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
+	                    "e18": [ "queue", "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lyon": [],
@@ -123,9 +123,15 @@ def checkConfig(configFileName, system = ""):
 			options = requiredOptions[section]
 			for option in options:
 				if not config.has_option(section, option):
-					print("ERROR: '" + section + "' section is missing option '" + option + "'.")
-					error = True
-					continue
+                                        if section is "e18" and option is "queue":
+                                                if not config.has_option("e18", "shortqueue"):
+                                                        print("ERROR: '" + section + "' section is missing option '" + option + "'.")
+                                                        error = True
+                                                        continue
+                                        else:
+                                                print("ERROR: '" + section + "' section is missing option '" + option + "'.")
+                                                error = True
+                                                continue
 				if section in filesToTest.keys() and option in filesToTest[section] and (system == "" or system == section):
 					path = _getRealPath(config.get(section, option))
 					if not os.path.exists(path):
