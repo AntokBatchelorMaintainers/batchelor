@@ -398,8 +398,7 @@ class BatchelorHandler(Batchelor):
 
 		if memory:
 			for section in self._config.sections():
-				if "memory" in [ e[0] for e in self._config.items(section)]:
-					self._config.set(section, "memory", memory)
+				self._config.set(section, "memory", memory)
 
 
 		self._submittedJobs = []

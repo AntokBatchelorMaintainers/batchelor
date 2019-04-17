@@ -2,6 +2,7 @@
 import multiprocessing
 import os
 import tempfile
+import re
 
 import batchelor
 from _job import JobStatus
@@ -20,6 +21,11 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 	(fileDescriptor, fileName) = tempfile.mkstemp()
 	os.close(fileDescriptor)
 	headerFileName = batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file"))
+	resources = config.get(submoduleIdentifier(), "resources")
+	if config.has_option(submoduleIdentifier(), "memory"):
+		if 'ConsumableMemory' in resources:
+			resources = re.sub(r"ConsumableMemory\(.*?\)", "", resources).strip()
+		resources += " ConsumableMemory({m})".format(m=config.get(submoduleIdentifier(), "memory"))
 	with open(fileName, 'w') as tempFile:
 		tempFile.write("#!/bin/bash\n\n")
 		tempFile.write("#@ group = " + config.get(submoduleIdentifier(), "group") + "\n")
@@ -29,7 +35,7 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 		tempFile.write("#@ notify_user = " + config.get(submoduleIdentifier(), "notify_user") + "\n")
 		tempFile.write("#@ node_usage = " + config.get(submoduleIdentifier(), "node_usage") + "\n")
 		tempFile.write("#@ wall_clock_limit = " + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		tempFile.write("#@ resources = " + config.get(submoduleIdentifier(), "resources") + "\n")
+		tempFile.write("#@ resources = " + resources + "\n")
 		tempFile.write("#@ job_type = " + config.get(submoduleIdentifier(), "job_type") + "\n")
 		tempFile.write("#@ class = " + config.get(submoduleIdentifier(), "job_type") + "\n")
 		if jobName is not None:
