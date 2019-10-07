@@ -16,8 +16,8 @@ def submoduleIdentifier():
 
 
 def submitJob(config, command, outputFile, jobName, wd = None):
-	
-	
+
+
 	# check if only a certain amount of active jobs is allowd
 	if config.has_option(submoduleIdentifier(), "max_active_jobs"):
 		max_active_jobs = int(config.get(submoduleIdentifier(), "max_active_jobs"))
@@ -26,7 +26,7 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 		while True:
 			try:
 				nRunningJobs = len(getListOfActiveJobs(None))
-			except batchelorn.BatchelorException:
+			except batchelor.BatchelorException:
 				nRunningJobs = max_active_jobs
 			if nRunningJobs < max_active_jobs:
 				break
@@ -82,7 +82,8 @@ def _wrapSubmitJob(args):
 
 
 def getListOfActiveJobs(jobName):
-	return map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	ret = map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	return ret
 
 
 def getNActiveJobs(jobName):
@@ -159,16 +160,21 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 			time_str = lineSplit[5]
 			try:
 				hours = 0.0
-				if '-' in time_str:
-					time_str = time_str.split('-')
-					hours += float(time_str[0])*24
-					time_str = time_str[1].split(':')
+				minutes = 0.0
+				seconds = 0.0
+				if time_str == 'INVALID':
+
 				else:
-					time_str = time_str.split(':')
-				seconds = float(time_str[-1])
-				minutes = float(time_str[-2])
-				if(len(time_str) > 2):
-					hours += float(time_str[-3])
+					if '-' in time_str:
+						time_str = time_str.split('-')
+						hours += float(time_str[0])*24
+						time_str = time_str[1].split(':')
+					else:
+						time_str = time_str.split(':')
+					seconds = float(time_str[-1])
+					minutes = float(time_str[-2])
+					if(len(time_str) > 2):
+						hours += float(time_str[-3])
 				total_time = hours + minutes / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:
