@@ -15,7 +15,7 @@ def submoduleIdentifier():
 	return "lrz"
 
 
-def submitJob(config, command, outputFile, jobName, wd = None):
+def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 
 
 	# check if only a certain amount of active jobs is allowd
@@ -53,7 +53,10 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 			tempFile.write("#SBATCH -J " + jobName + "\n")
 		tempFile.write("#SBATCH --get-user-env \n")
 		tempFile.write("#SBATCH --export=NONE \n")
+		if nTasks is not None:
+			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
 		tempFile.write("#SBATCH --clusters=serial \n\n\n")
+		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
 			for line in headerFile:
 				if line.startswith("#!"):
@@ -72,6 +75,32 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 	except ValueError:
 		raise batchelor.BatchelorException('parsing output of sbatch to get job id failed.')
 	return jobId
+
+
+
+def submitJob(config, command, outputFile, jobName, wd = None):
+	return _submitJob(config, command, outputFile, jobName, wd)
+
+def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
+	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
+	i = 0
+	jids = []
+	while i < len(commands):
+		j = min(len(commands), i+nTasksPerJob)
+		nTasks = j-i
+		ifCommands = []
+		srunConf = "\n".join(["{i} {cmd}".format(i=ii, cmd=commands[ii]) for ii in range(i,j)])
+		srunConf = srunConf.replace(r'"', r'\"')
+		fullCmd = 'tmpDir=$(mktemp -d)\ntrap "rm -rf \'${tmpDir}\'" EXIT\n'
+		fullCmd += 'echo "{srun}" > ${{tmpDir}}/srun.conf\n'.format(srun='\n'.join(["{i} bash ${{tmpDir}}/{i}.sh".format(i=k) for k in range(nTasks)]))
+		for k, ii in enumerate(range(i,j)):
+			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
+		fullCmd += 'srun -n {nTasks} --multi-prog ${{tmpDir}}/srun.conf'.format( nTasks=nTasks)
+		outputFilename = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		jid = _submitJob(config, fullCmd, outputFile, jobName, wd, nTasks= nTasks)
+		jids += [jid]*nTasks
+		i=j
+	return jids
 
 
 def _wrapSubmitJob(args):
@@ -135,7 +164,10 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 		line = line.rstrip('\n')
 		lineSplit = line.split()
 		try:
-			currentJobId = int(lineSplit[0])
+			if '_' in lineSplit[0]:
+				currentJobId = int(lineSplit[0].split('_')[0])
+			else:
+				currentJobId = int(lineSplit[0])
 			currentJobStatus = JobStatus(currentJobId)
 
 			# name
@@ -163,7 +195,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				minutes = 0.0
 				seconds = 0.0
 				if time_str == 'INVALID':
-
+					pass
 				else:
 					if '-' in time_str:
 						time_str = time_str.split('-')

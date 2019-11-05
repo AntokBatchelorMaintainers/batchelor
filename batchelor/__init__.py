@@ -274,6 +274,16 @@ class Batchelor:
 				jobIds.append(jobId)
 			return jobIds
 
+	def submitArrayJobs(self, commands, outputFile, jobName = None, wd = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "submitArrayJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+
+			return self.batchFunctions.submitArrayJobs(self._config, commands, outputFile, jobName, wd)
+		else:
+			raise BatchelorException("not implemented")
+
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
@@ -376,7 +386,7 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True, collectJobs = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
@@ -407,6 +417,7 @@ class BatchelorHandler(Batchelor):
 		self._check_job_success = check_job_success
 		self._store_commands = store_commands
 		self._store_commands_filename = ""
+		self._collectJobs = collectJobs
 
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
@@ -456,7 +467,10 @@ class BatchelorHandler(Batchelor):
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
 
 
-		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
+		if not self._collectJobs:
+			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
+		else:
+			jid = -1
 
 		if jid:
 			self._submittedJobs.append(jid)
@@ -479,6 +493,11 @@ class BatchelorHandler(Batchelor):
 		'''
 
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
+
+	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
+		commands = ["( {0} ) &> '{1}'".format(command, logfile)for command, logfile in zip(self._commands, self._logfiles)]
+		self._submittedJobs = Batchelor.submitArrayJobs(self, commands, outputFile = outputFile, wd=wd, jobName=jobName)
+		return self._submittedJobs
 
 
 	def wait(self, timeout = 60, jobName = None, catch_SIGINT=True):
