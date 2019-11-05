@@ -48,7 +48,7 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		tempFile.write("#SBATCH -D " + wd + "\n")
 		tempFile.write("#SBATCH -o " + outputFile + "\n")
 		tempFile.write("#SBATCH --time=" + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		tempFile.write("#SBATCH --mem=" + config.get(submoduleIdentifier(), "memory") + "\n")
+		tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
 		if jobName is not None:
 			tempFile.write("#SBATCH -J " + jobName + "\n")
 		tempFile.write("#SBATCH --get-user-env \n")
