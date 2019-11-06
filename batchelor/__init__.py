@@ -109,7 +109,7 @@ def checkConfig(configFileName, system = ""):
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lxplusLSF": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
-	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
+	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "n_tasks_per_job" ],
 	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],

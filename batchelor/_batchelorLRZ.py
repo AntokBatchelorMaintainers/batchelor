@@ -59,8 +59,9 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		if nTasks is not None:
 			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
 			tempFile.write("#SBATCH --ntasks-per-node=24 \n")
-		tempFile.write("#SBATCH --cpus-per-task=1 \n")
-		tempFile.write("#SBATCH --clusters=serial \n\n\n")
+		tempFile.write("#SBATCH --clusters={0}\n".format(config.get(submoduleIdentifier(), "clusters")))
+		if config.get(submoduleIdentifier(), "clusters") == 'mpp2':
+			tempFile.write("#SBATCH --partition=mpp2_batch \n\n\n")
 		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
 			for line in headerFile:
@@ -146,7 +147,7 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	if not jobIds:
 		return True
-	command = "scancel --clusters=serial"
+	command = "scancel --clusters=all"
 	for jobId in jobIds:
 		command += " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
@@ -157,16 +158,20 @@ def deleteJobs(jobIds):
 
 
 def getListOfJobStates(jobName, username = None, detailed = True):
-	command = "squeue --clusters=serial -u $(whoami) -l -h"
+	command = "squeue --clusters=all -u $(whoami) -l -h"
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("squeue failed (stderr: '" + stderr + "')")
 	jobList = []
 	jobStates = []
 	for line in stdout.split('\n'):
-		if line.startswith("CLUSTER: serial"):
+		if line.startswith("CLUSTER: "):
+			continue;
+		if line.strip().startswith("JOBID"):
 			continue;
 		line = line.rstrip('\n')
+		if not line:
+			continue
 		lineSplit = line.split()
 		try:
 			if '_' in lineSplit[0]:
