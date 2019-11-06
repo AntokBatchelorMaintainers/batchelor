@@ -55,6 +55,8 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		tempFile.write("#SBATCH --export=NONE \n")
 		if nTasks is not None:
 			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
+			tempFile.write("#SBATCH --ntasks-per-node=24 \n")
+		tempFile.write("#SBATCH --cpus-per-task=1 \n")
 		tempFile.write("#SBATCH --clusters=serial \n\n\n")
 		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
