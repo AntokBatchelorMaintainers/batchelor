@@ -96,7 +96,7 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		nTasks = j-i
 		srunConf = "\n".join(["{i} {cmd}".format(i=ii, cmd=commands[ii]) for ii in range(i,j)])
 		srunConf = srunConf.replace(r'"', r'\"')
-		fullCmd = 'tmpDir=$(mktemp -d)\ntrap "rm -rf \'${tmpDir}\'" EXIT\n'
+		fullCmd = 'tmpDir=$(mktemp -d -p {SCRATCH}/tmp)\ntrap "rm -rf \'${{tmpDir}}\'" EXIT\n'.format(SCRATCH=os.environ['SCRATCH'])
 		fullCmd += 'echo "{srun}" > ${{tmpDir}}/srun.conf\n'.format(srun='\n'.join(["{i} bash ${{tmpDir}}/{i}.sh".format(i=k) for k in range(nTasks)]))
 		for k, ii in enumerate(range(i,j)):
 			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
