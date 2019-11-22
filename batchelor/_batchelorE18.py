@@ -73,6 +73,24 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	return jobId
 
 
+def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
+	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
+	i = 0
+	jids = []
+	while i < len(commands):
+		j = min(len(commands), i+nTasksPerJob)
+		nTasks = j-i
+		fullCmd = ""
+		for k, ii in enumerate(range(i,j)):
+			fullCmd += 'if [[ ${{SGE_TASK_ID}} == {i} ]]; then {cmd}; fi\n'.format(cmd=commands[ii], i=k+1)
+		if outputFile != "/dev/null":
+			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		jid = submitJob(config, fullCmd, outputFile, jobName, wd, arrayStart=1, arrayEnd=nTasks, arrayStep=1)
+		jids += [jid]*nTasks
+		i=j
+	return jids
+
+
 def getListOfActiveJobs(jobName):
 	if jobName is None:
 		command = "qstat"

@@ -90,7 +90,6 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 	while i < len(commands):
 		j = min(len(commands), i+nTasksPerJob)
 		nTasks = j-i
-		ifCommands = []
 		srunConf = "\n".join(["{i} {cmd}".format(i=ii, cmd=commands[ii]) for ii in range(i,j)])
 		srunConf = srunConf.replace(r'"', r'\"')
 		fullCmd = 'tmpDir=$(mktemp -d)\ntrap "rm -rf \'${tmpDir}\'" EXIT\n'
@@ -98,7 +97,8 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		for k, ii in enumerate(range(i,j)):
 			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
 		fullCmd += 'srun -n {nTasks} --multi-prog ${{tmpDir}}/srun.conf'.format( nTasks=nTasks)
-		outputFilename = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		if outputFile != "/dev/null":
+			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
 		jid = _submitJob(config, fullCmd, outputFile, jobName, wd, nTasks= nTasks)
 		jids += [jid]*nTasks
 		i=j

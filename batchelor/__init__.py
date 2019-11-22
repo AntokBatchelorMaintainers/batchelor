@@ -10,8 +10,6 @@ import pickle
 import sys
 import re
 
-import _job
-
 
 class BatchelorException(Exception):
 
@@ -526,7 +524,12 @@ class BatchelorHandler(Batchelor):
 		return;
 
 
-	def checkJobStates(self, verbose=True):
+	def checkJobStates(self, verbose=True, raiseException=False):
+		'''
+		Check the status of the jobs submitted by this `BatchelorHandler`
+		@param verbose: Print information about failed jobs
+		@param raiseException: Raise exception if one or more jobes failed
+		'''
 		if not self._check_job_success:
 			print "Called checkJobStates, but Batchelor was not configured to check job states"
 			return False
@@ -558,6 +561,8 @@ class BatchelorHandler(Batchelor):
 					error_ids.append( self._submittedJobs[i_job])
 					error_logfiles.append(log_file)
 
+		if raiseException and len(error_ids) > 0:
+			raise BatchelorException("{0} jobs failed".format(len(error_ids)))
 		return error_ids, error_logfiles;
 
 	def _checkJobStatus(self, log_file):
