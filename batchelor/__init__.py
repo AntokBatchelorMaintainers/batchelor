@@ -416,6 +416,7 @@ class BatchelorHandler(Batchelor):
 		self._store_commands = store_commands
 		self._store_commands_filename = ""
 		self._collectJobs = collectJobs
+		self._collectedJobs = []
 
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
@@ -469,6 +470,7 @@ class BatchelorHandler(Batchelor):
 			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
 		else:
 			jid = -1
+			self._collectedJobs.append(len(self._commands))
 
 		if jid:
 			self._submittedJobs.append(jid)
@@ -493,7 +495,13 @@ class BatchelorHandler(Batchelor):
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
 
 	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
-		commands = ["( {0} ) &> '{1}'".format(command, logfile)for command, logfile in zip(self._commands, self._logfiles)]
+		if not self._collectJobs:
+			print "Batchelor was not configured to collect jobs. Nothing done!"
+			return []
+		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
+		self._collectedJobs = []
+		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
+			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), 'master.log')
 		self._submittedJobs = Batchelor.submitArrayJobs(self, commands, outputFile = outputFile, wd=wd, jobName=jobName)
 		return self._submittedJobs
 
