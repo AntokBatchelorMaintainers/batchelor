@@ -498,6 +498,8 @@ class BatchelorHandler(Batchelor):
 		if not self._collectJobs:
 			print "Batchelor was not configured to collect jobs. Nothing done!"
 			return []
+		if not self._collectedJobs:
+			return []
 		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
 		self._collectedJobs = []
 		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
