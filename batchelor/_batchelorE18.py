@@ -14,6 +14,8 @@ from _job import JobStatus
 def submoduleIdentifier():
 	return "e18"
 
+def canCollectJobs():
+	return True
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None, ompNumThreads=None):
 

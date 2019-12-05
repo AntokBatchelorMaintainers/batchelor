@@ -14,6 +14,9 @@ from _job import JobStatus
 def submoduleIdentifier():
 	return "lrz"
 
+def canCollectJobs():
+	return True
+
 
 def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 

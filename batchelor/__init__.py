@@ -494,12 +494,32 @@ class BatchelorHandler(Batchelor):
 
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
 
+
+	def collectJobsIfPossible(self, verbose=False):
+		'''
+		Collect jobs if implemented for the current batch system
+		@param verbose: Print warning if collections is not implemented
+		@return: True if job collections is active
+		'''
+		if "canCollectJobs" in self.batchFunctions.__dict__.keys() and self.batchFunctions.canCollectJobs():
+			self._collectJobs = True
+		elif verbose:
+			print "Collection of jobs is not implemented for the current batch system."
+
+		if self._submittedJobs:
+			print "Using `collectJobs`, but {0} jobs have been already submitted.".format(len(self._submittedJobs))
+
+		return self._collectedJobs
+
+
 	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
 		if not self._collectJobs:
 			print "Batchelor was not configured to collect jobs. Nothing done!"
 			return []
 		if not self._collectedJobs:
 			return []
+		if not wd:
+			wd = os.getcwd()
 		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
 		self._collectedJobs = []
 		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
