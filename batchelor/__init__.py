@@ -394,6 +394,7 @@ class BatchelorHandler(Batchelor):
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
 		@param catchSIGINT: Catch SIGINT (Ctrl+C) and ask to stopp all jobs
+		@param collectJobs: Collect jobs. You can submit them later by using `submitCollectedJobsInArray`. This enables the internal job-id counter.
 		'''
 
 
@@ -409,7 +410,8 @@ class BatchelorHandler(Batchelor):
 				self._config.set(section, "memory", memory)
 
 
-		self._submittedJobs = []
+		self._submittedJobs = [] # list of job ids of the batch system that have actually been submitted to the batch system
+		self._jobIds   = []      # list of job ids submitted throuth this BatchelorHandler. The same as _submittedJobs if not _collectJobs
 		self._commands = []
 		self._logfiles = []
 		self._check_job_success = check_job_success
@@ -417,6 +419,7 @@ class BatchelorHandler(Batchelor):
 		self._store_commands_filename = ""
 		self._collectJobs = collectJobs
 		self._collectedJobs = []
+		self._internalJidCounter=0
 
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
@@ -469,21 +472,26 @@ class BatchelorHandler(Batchelor):
 		if not self._collectJobs:
 			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
 		else:
-			jid = -1
 			self._collectedJobs.append(len(self._commands))
+			jid = -1
 
 		if jid:
 			self._submittedJobs.append(jid)
+			if self._collectJobs:
+				self._jobIds.append(self._internalJidCounter)
+				self._internalJidCounter += 1
+			else:
+				self._jobIds.append(jid)
 			self._commands.append( command )
 			self._logfiles.append( output )
 
 			if self._store_commands:
 				with open(self._store_commands_filename, 'a') as fout:
 					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority, 'ompNumThreads': ompNumThreads}
-					submit = {jid:submit_entry}
+					submit = {self._jobIds[-1]:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
 
-		return jid;
+		return jid
 
 
 	def getListOfSubmittedActiveJobs(self, jobName=None):
@@ -509,7 +517,7 @@ class BatchelorHandler(Batchelor):
 		if self._submittedJobs:
 			print "Using `collectJobs`, but {0} jobs have been already submitted.".format(len(self._submittedJobs))
 
-		return self._collectedJobs
+		return self._collectJobs
 
 
 	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
@@ -528,7 +536,7 @@ class BatchelorHandler(Batchelor):
 		return self._submittedJobs
 
 
-	def wait(self, timeout = 60, jobName = None, catch_SIGINT=True):
+	def wait(self, timeout = 60, jobName = None):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
 
@@ -579,7 +587,7 @@ class BatchelorHandler(Batchelor):
 						print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 					print "Can not find logfile '{0}'".format(log_file)
 					print "\tfor command:'{0}'".format(self._commands[i_job])
-				error_ids.append( self._submittedJobs[i_job])
+				error_ids.append( self._jobIds[i_job])
 				error_logfiles.append(log_file)
 			else:
 				if not self._checkJobStatus(log_file):
@@ -588,12 +596,13 @@ class BatchelorHandler(Batchelor):
 							print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 						print "Error in logfile '{0}'".format(log_file)
 						print "\tfor command:'{0}'".format(self._commands[i_job])
-					error_ids.append( self._submittedJobs[i_job])
+					error_ids.append( self._jobIds[i_job])
 					error_logfiles.append(log_file)
 
 		if raiseException and len(error_ids) > 0:
 			raise BatchelorException("{0} jobs failed".format(len(error_ids)))
-		return error_ids, error_logfiles;
+		return error_ids, error_logfiles
+
 
 	def _checkJobStatus(self, log_file):
 		foundOK = False
