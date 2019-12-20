@@ -406,9 +406,7 @@ class BatchelorHandler(Batchelor):
 			self._config.set("local","cores", n_threads);
 
 		if memory:
-			for section in self._config.sections():
-				self._config.set(section, "memory", memory)
-
+			self.setMemory(memory)
 
 		self._submittedJobs = [] # list of job ids of the batch system that have actually been submitted to the batch system
 		self._jobIds   = []      # list of job ids submitted throuth this BatchelorHandler. The same as _submittedJobs if not _collectJobs
@@ -442,6 +440,15 @@ class BatchelorHandler(Batchelor):
 
 		if catchSIGINT:
 			signal.signal( signal.SIGINT, finish)
+
+
+	def setMemory(self, memory):
+		'''
+		Set memory requested per job. Overwrites settings from config file
+		'''
+		for section in self._config.sections():
+			self._config.set(section, "memory", memory)
+
 
 	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None, ompNumThreads = None):
 		'''
@@ -521,9 +528,6 @@ class BatchelorHandler(Batchelor):
 
 
 	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
-		if not self._collectJobs:
-			print "Batchelor was not configured to collect jobs. Nothing done!"
-			return []
 		if not self._collectedJobs:
 			return []
 		if not wd:
