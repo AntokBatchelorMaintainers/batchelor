@@ -212,11 +212,11 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumthreads=None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumThreads=None):
 		'''
 		@param priority: Job priority [-1.0, 1.0]
-		@param ompNumthreads: Number of threads requested.
-		                      Sets OMP_NUM_THREADS before the command and requires ompNumthreads slots.
+		@param ompNumThreads: Number of threads requested.
+		                      Sets OMP_NUM_THREADS before the command and requires ompNumThreads slots.
 		'''
 		kwargs = {}
 		if not self.initialized():
@@ -230,11 +230,11 @@ class Batchelor:
 				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
 					raise BatchelorException("Priority not implemented")
 				kwargs['priority'] = priority
-			if ompNumthreads is not None:
-				ompNumthreads = int(ompNumthreads)
-				if not 'ompNumthreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
-					raise BatchelorException("ompNumthreads not implemented")
-				kwargs['ompNumthreads'] = ompNumthreads
+			if ompNumThreads is not None:
+				ompNumThreads = int(ompNumThreads)
+				if not 'ompNumThreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+					raise BatchelorException("ompNumThreads not implemented")
+				kwargs['ompNumThreads'] = ompNumThreads
 
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
@@ -477,7 +477,7 @@ class BatchelorHandler(Batchelor):
 
 
 		if not self._collectJobs:
-			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
+			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumThreads=ompNumThreads)
 		else:
 			self._collectedJobs.append(len(self._commands))
 			jid = -1
@@ -486,6 +486,7 @@ class BatchelorHandler(Batchelor):
 			self._submittedJobs.append(jid)
 			if self._collectJobs:
 				self._jobIds.append(self._internalJidCounter)
+				jid = self._internalJidCounter
 				self._internalJidCounter += 1
 			else:
 				self._jobIds.append(jid)
