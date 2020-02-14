@@ -14,6 +14,8 @@ from _job import JobStatus
 def submoduleIdentifier():
 	return "e18"
 
+def canCollectJobs():
+	return True
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None, priority=None, ompNumThreads=None):
 
@@ -43,7 +45,12 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		cmnd += "-t " + str(arrayStart) + "-" + str(arrayEnd) + ":" + str(arrayStep) + " "
 	cmnd += "-o '" + outputFile + "' "
 	cmnd += "-wd '" + ("/tmp/" if not wd else wd) + "' "
-	cmnd += "-l short=1 " if config.get(submoduleIdentifier(), "shortqueue") in ["1", "TRUE", "true", "True"] else "-l medium=1 "
+	if config.has_option(submoduleIdentifier(), "shortqueue") and config.get(submoduleIdentifier(), "shortqueue") in [1, "1", "TRUE", "true", "True"]:
+		cmnd += "-l short=1 "
+	elif config.has_option(submoduleIdentifier(), "longqueue") and config.get(submoduleIdentifier(), "longqueue") in [1, "1", "TRUE", "true", "True"]:
+		cmnd += "-l long=1 "
+	else:
+		cmnd += "-l medium=1 "
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
 	cmnd += "-l arch=" + config.get(submoduleIdentifier(), "arch") + " "
 	cmnd += _getExcludedHostsString(config)
@@ -66,6 +73,24 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		raise batchelor.BatchelorException('parsing of qsub output to get job id failed.')
 	batchelor.runCommand("rm -f " + fileName)
 	return jobId
+
+
+def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
+	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
+	i = 0
+	jids = []
+	while i < len(commands):
+		j = min(len(commands), i+nTasksPerJob)
+		nTasks = j-i
+		fullCmd = ""
+		for k, ii in enumerate(range(i,j)):
+			fullCmd += 'if [[ ${{SGE_TASK_ID}} == {i} ]]; then {cmd}; fi\n'.format(cmd=commands[ii], i=k+1)
+		if outputFile != "/dev/null":
+			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		jid = submitJob(config, fullCmd, outputFile, jobName, wd, arrayStart=1, arrayEnd=nTasks, arrayStep=1)
+		jids += [jid]*nTasks
+		i=j
+	return jids
 
 
 def getListOfActiveJobs(jobName):

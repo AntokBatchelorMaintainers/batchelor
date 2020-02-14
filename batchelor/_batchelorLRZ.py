@@ -14,16 +14,25 @@ from _job import JobStatus
 def submoduleIdentifier():
 	return "lrz"
 
+def canCollectJobs():
+	return True
 
-def submitJob(config, command, outputFile, jobName, wd = None):
-	
-	
+
+def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
+
+
 	# check if only a certain amount of active jobs is allowd
 	if config.has_option(submoduleIdentifier(), "max_active_jobs"):
 		max_active_jobs = int(config.get(submoduleIdentifier(), "max_active_jobs"))
 		i=0;
 		waitTime = 90
-		while len(getListOfActiveJobs(None)) >= max_active_jobs:
+		while True:
+			try:
+				nRunningJobs = len(getListOfActiveJobs(None))
+			except batchelor.BatchelorException:
+				nRunningJobs = max_active_jobs
+			if nRunningJobs < max_active_jobs:
+				break
 			if i == 0:
 				sys.stdout.write("Waiting for free slots")
 				sys.stdout.flush()
@@ -42,12 +51,18 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 		tempFile.write("#SBATCH -D " + wd + "\n")
 		tempFile.write("#SBATCH -o " + outputFile + "\n")
 		tempFile.write("#SBATCH --time=" + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		tempFile.write("#SBATCH --mem=" + config.get(submoduleIdentifier(), "memory") + "\n")
+		tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
 		if jobName is not None:
 			tempFile.write("#SBATCH -J " + jobName + "\n")
 		tempFile.write("#SBATCH --get-user-env \n")
 		tempFile.write("#SBATCH --export=NONE \n")
-		tempFile.write("#SBATCH --clusters=serial \n\n\n")
+		if nTasks is not None:
+			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
+			tempFile.write("#SBATCH --ntasks-per-node=24 \n")
+		tempFile.write("#SBATCH --clusters={0}\n".format(config.get(submoduleIdentifier(), "clusters")))
+		if config.get(submoduleIdentifier(), "clusters") == 'mpp2':
+			tempFile.write("#SBATCH --partition=mpp2_batch \n\n\n")
+		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
 			for line in headerFile:
 				if line.startswith("#!"):
@@ -68,6 +83,32 @@ def submitJob(config, command, outputFile, jobName, wd = None):
 	return jobId
 
 
+
+def submitJob(config, command, outputFile, jobName, wd = None):
+	return _submitJob(config, command, outputFile, jobName, wd)
+
+def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
+	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
+	i = 0
+	jids = []
+	while i < len(commands):
+		j = min(len(commands), i+nTasksPerJob)
+		nTasks = j-i
+		srunConf = "\n".join(["{i} {cmd}".format(i=ii, cmd=commands[ii]) for ii in range(i,j)])
+		srunConf = srunConf.replace(r'"', r'\"')
+		fullCmd = 'tmpDir=$(mktemp -d -p {SCRATCH}/tmp)\ntrap "rm -rf \'${{tmpDir}}\'" EXIT\n'.format(SCRATCH=os.environ['SCRATCH'])
+		fullCmd += 'echo "{srun}" > ${{tmpDir}}/srun.conf\n'.format(srun='\n'.join(["{i} bash ${{tmpDir}}/{i}.sh".format(i=k) for k in range(nTasks)]))
+		for k, ii in enumerate(range(i,j)):
+			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
+		fullCmd += 'srun -n {nTasks} --multi-prog ${{tmpDir}}/srun.conf'.format( nTasks=nTasks)
+		if outputFile != "/dev/null":
+			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		jid = _submitJob(config, fullCmd, outputFile, jobName, wd, nTasks= nTasks)
+		jids += [jid]*nTasks
+		i=j
+	return jids
+
+
 def _wrapSubmitJob(args):
 	try:
 		return submitJob(*args)
@@ -76,7 +117,8 @@ def _wrapSubmitJob(args):
 
 
 def getListOfActiveJobs(jobName):
-	return map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	ret = map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	return ret
 
 
 def getNActiveJobs(jobName):
@@ -105,7 +147,7 @@ def deleteErrorJobs(jobName):
 def deleteJobs(jobIds):
 	if not jobIds:
 		return True
-	command = "scancel --clusters=serial"
+	command = "scancel --clusters=all"
 	for jobId in jobIds:
 		command += " " + str(jobId)
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
@@ -116,19 +158,26 @@ def deleteJobs(jobIds):
 
 
 def getListOfJobStates(jobName, username = None, detailed = True):
-	command = "squeue --clusters=serial -u $(whoami) -l -h"
+	command = "squeue --clusters=all -u $(whoami) -l -h"
 	(returncode, stdout, stderr) = batchelor.runCommand(command)
 	if returncode != 0:
 		raise batchelor.BatchelorException("squeue failed (stderr: '" + stderr + "')")
 	jobList = []
 	jobStates = []
 	for line in stdout.split('\n'):
-		if line.startswith("CLUSTER: serial"):
+		if line.startswith("CLUSTER: "):
+			continue;
+		if line.strip().startswith("JOBID"):
 			continue;
 		line = line.rstrip('\n')
+		if not line:
+			continue
 		lineSplit = line.split()
 		try:
-			currentJobId = int(lineSplit[0])
+			if '_' in lineSplit[0]:
+				currentJobId = int(lineSplit[0].split('_')[0])
+			else:
+				currentJobId = int(lineSplit[0])
 			currentJobStatus = JobStatus(currentJobId)
 
 			# name
@@ -153,16 +202,21 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 			time_str = lineSplit[5]
 			try:
 				hours = 0.0
-				if '-' in time_str:
-					time_str = time_str.split('-')
-					hours += float(time_str[0])*24
-					time_str = time_str[1].split(':')
+				minutes = 0.0
+				seconds = 0.0
+				if time_str == 'INVALID':
+					pass
 				else:
-					time_str = time_str.split(':')
-				seconds = float(time_str[-1])
-				minutes = float(time_str[-2])
-				if(len(time_str) > 2):
-					hours += float(time_str[-3])
+					if '-' in time_str:
+						time_str = time_str.split('-')
+						hours += float(time_str[0])*24
+						time_str = time_str[1].split(':')
+					else:
+						time_str = time_str.split(':')
+					seconds = float(time_str[-1])
+					minutes = float(time_str[-2])
+					if(len(time_str) > 2):
+						hours += float(time_str[-3])
 				total_time = hours + minutes / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:

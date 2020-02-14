@@ -8,8 +8,7 @@ import tempfile
 import inspect
 import pickle
 import sys
-
-import _job
+import re
 
 
 class BatchelorException(Exception):
@@ -61,7 +60,7 @@ def detectSystem():
 	elif hostname == "compass-kit.gridka.de":
 		return "gridka"
 	elif hostname.startswith("lxplus") or hostname.endswith(".cern.ch"):
-		return "lxplus"
+		return "lxplusLSF"
 	elif hostname.endswith(".e18.physik.tu-muenchen.de"):
 		return "e18"
 	elif hostname.startswith("ccage"):
@@ -105,16 +104,18 @@ def checkConfig(configFileName, system = ""):
 		print("ERROR: System set but corresponding section is missing in config file.")
 		error = True
 	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
-	                    "e18": [ "shortqueue", "memory", "header_file", "arch" ],
+	                    "e18": [ "memory", "header_file", "arch" ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
+	                    "lxplusLSF": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
-	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs" ],
+	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "n_tasks_per_job" ],
 	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
+	                "lxplusLSF": [ "header_file" ],
 	                "c2pap": [ "header_file" ],
 	                "lrz": [ "header_file" ],
 	                "local": [ "shell" ] }
@@ -180,6 +181,8 @@ class Batchelor:
 			import batchelor._batchelorE18 as batchFunctions
 		elif self._system == "lxplus":
 			import batchelor._batchelorLxplusCondor as batchFunctions
+		elif self._system == "lxplusLSF":
+			import batchelor._batchelorLxplus as batchFunctions
 		elif self._system == "lyon":
 			import batchelor._batchelorLyon as batchFunctions
 		elif self._system == "local":
@@ -209,11 +212,11 @@ class Batchelor:
 		if "shutdown" in self.batchFunctions.__dict__.keys():
 			return self.batchFunctions.shutdown()
 
-	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumthreads=None):
+	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumThreads=None):
 		'''
 		@param priority: Job priority [-1.0, 1.0]
-		@param ompNumthreads: Number of threads requested.
-		                      Sets OMP_NUM_THREADS before the command and requires ompNumthreads slots.
+		@param ompNumThreads: Number of threads requested.
+		                      Sets OMP_NUM_THREADS before the command and requires ompNumThreads slots.
 		'''
 		kwargs = {}
 		if not self.initialized():
@@ -227,11 +230,11 @@ class Batchelor:
 				if not 'priority' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
 					raise BatchelorException("Priority not implemented")
 				kwargs['priority'] = priority
-			if ompNumthreads is not None:
-				ompNumthreads = int(ompNumthreads)
-				if not 'ompNumthreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
-					raise BatchelorException("ompNumthreads not implemented")
-				kwargs['ompNumthreads'] = ompNumthreads
+			if ompNumThreads is not None:
+				ompNumThreads = int(ompNumThreads)
+				if not 'ompNumThreads' in inspect.getargspec(self.batchFunctions.submitJob)[0]:
+					raise BatchelorException("ompNumThreads not implemented")
+				kwargs['ompNumThreads'] = ompNumThreads
 
 			return self.batchFunctions.submitJob(self._config, command, outputFile, jobName, wd, **kwargs)
 		else:
@@ -268,6 +271,16 @@ class Batchelor:
 					jobId = -1
 				jobIds.append(jobId)
 			return jobIds
+
+	def submitArrayJobs(self, commands, outputFile, jobName = None, wd = None):
+		if not self.initialized():
+			raise BatchelorException("not initialized")
+		if "submitArrayJobs" in self.batchFunctions.__dict__.keys():
+			_checkForSpecialCharacters(jobName)
+
+			return self.batchFunctions.submitArrayJobs(self._config, commands, outputFile, jobName, wd)
+		else:
+			raise BatchelorException("not implemented")
 
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
@@ -371,7 +384,7 @@ class BatchelorHandler(Batchelor):
 		to also handle running jobs
 	'''
 
-	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True):
+	def __init__(self, configfile = '~/.batchelorrc', systemOverride = "", n_threads = -1, memory = None, check_job_success = False, store_commands = False, catchSIGINT= True, collectJobs = False):
 		'''
 		Initialize the batchelor
 		@param configfile: Path to batchelor configfile
@@ -381,28 +394,34 @@ class BatchelorHandler(Batchelor):
 		@param check_job_success: Check if the job has been finished successfully.
 		@param store_commands: Store commands in a dedicated pickle file to reschedule commands. (Also a folder name can be given)
 		@param catchSIGINT: Catch SIGINT (Ctrl+C) and ask to stopp all jobs
+		@param collectJobs: Collect jobs. You can submit them later by using `submitCollectedJobsInArray`. This enables the internal job-id counter.
 		'''
 
+
 		Batchelor.__init__(self)
+
 		Batchelor.initialize(self, os.path.expanduser(configfile), systemOverride )
 
-		if memory:
-			for section in self._config.sections():
-				if "memory" in [ e[0] for e in self._config.items(section)]:
-					self._config.set(section, "memory", memory)
-		if systemOverride == "local" and n_threads:
+		if systemOverride == "local" and n_threads >= 0:
 			self._config.set("local","cores", n_threads);
 
-		self._submittedJobs = []
+		if memory:
+			self.setMemory(memory)
+
+		self._submittedJobs = [] # list of job ids of the batch system that have actually been submitted to the batch system
+		self._jobIds   = []      # list of job ids submitted throuth this BatchelorHandler. The same as _submittedJobs if not _collectJobs
 		self._commands = []
 		self._logfiles = []
 		self._check_job_success = check_job_success
 		self._store_commands = store_commands
 		self._store_commands_filename = ""
+		self._collectJobs = collectJobs
+		self._collectedJobs = []
+		self._internalJidCounter=0
 
 		if self._store_commands:
 			self._store_commands_filename = os.path.join(time.strftime("batchelorComandsLog_%y-%m-%d_%H-%M-%S.dat"))
-			if os.path.isdir(self._store_commands):
+			if isinstance(self._store_commands, str) and os.path.isdir(self._store_commands):
 				self._store_commands_filename = os.path.join(self._store_commands, self._store_commands_filename)
 			else:
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
@@ -421,6 +440,15 @@ class BatchelorHandler(Batchelor):
 
 		if catchSIGINT:
 			signal.signal( signal.SIGINT, finish)
+
+
+	def setMemory(self, memory):
+		'''
+		Set memory requested per job. Overwrites settings from config file
+		'''
+		for section in self._config.sections():
+			self._config.set(section, "memory", memory)
+
 
 	def submitJob(self, command, output = '/dev/null', wd = None, jobName=None, priority = None, ompNumThreads = None):
 		'''
@@ -448,20 +476,30 @@ class BatchelorHandler(Batchelor):
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
 
 
-		jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumthreads=ompNumThreads)
+		if not self._collectJobs:
+			jid = Batchelor.submitJob(self, command, outputFile = output, jobName=jobName, wd=wd, priority = priority, ompNumThreads=ompNumThreads)
+		else:
+			self._collectedJobs.append(len(self._commands))
+			jid = -1
 
 		if jid:
 			self._submittedJobs.append(jid)
+			if self._collectJobs:
+				self._jobIds.append(self._internalJidCounter)
+				jid = self._internalJidCounter
+				self._internalJidCounter += 1
+			else:
+				self._jobIds.append(jid)
 			self._commands.append( command )
 			self._logfiles.append( output )
 
 			if self._store_commands:
 				with open(self._store_commands_filename, 'a') as fout:
 					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority, 'ompNumThreads': ompNumThreads}
-					submit = {jid:submit_entry}
+					submit = {self._jobIds[-1]:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
 
-		return jid;
+		return jid
 
 
 	def getListOfSubmittedActiveJobs(self, jobName=None):
@@ -473,7 +511,37 @@ class BatchelorHandler(Batchelor):
 		return [ j for j in self.getListOfActiveJobs(jobName) if j in self._submittedJobs ]
 
 
-	def wait(self, timeout = 60, jobName = None, catch_SIGINT=True):
+	def collectJobsIfPossible(self, verbose=False):
+		'''
+		Collect jobs if implemented for the current batch system
+		@param verbose: Print warning if collections is not implemented
+		@return: True if job collections is active
+		'''
+		if "canCollectJobs" in self.batchFunctions.__dict__.keys() and self.batchFunctions.canCollectJobs():
+			self._collectJobs = True
+		elif verbose:
+			print "Collection of jobs is not implemented for the current batch system."
+
+		if self._submittedJobs:
+			print "Using `collectJobs`, but {0} jobs have been already submitted.".format(len(self._submittedJobs))
+
+		return self._collectJobs
+
+
+	def submitCollectedJobsInArray(self, outputFile = "/dev/null", jobName=None, wd = None):
+		if not self._collectedJobs:
+			return []
+		if not wd:
+			wd = os.getcwd()
+		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
+		self._collectedJobs = []
+		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
+			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), 'master.log')
+		self._submittedJobs = Batchelor.submitArrayJobs(self, commands, outputFile = outputFile, wd=wd, jobName=jobName)
+		return self._submittedJobs
+
+
+	def wait(self, timeout = 60, jobName = None):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
 
@@ -499,7 +567,12 @@ class BatchelorHandler(Batchelor):
 		return;
 
 
-	def checkJobStates(self, verbose=True):
+	def checkJobStates(self, verbose=True, raiseException=False):
+		'''
+		Check the status of the jobs submitted by this `BatchelorHandler`
+		@param verbose: Print information about failed jobs
+		@param raiseException: Raise exception if one or more jobes failed
+		'''
 		if not self._check_job_success:
 			print "Called checkJobStates, but Batchelor was not configured to check job states"
 			return False
@@ -519,21 +592,34 @@ class BatchelorHandler(Batchelor):
 						print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 					print "Can not find logfile '{0}'".format(log_file)
 					print "\tfor command:'{0}'".format(self._commands[i_job])
-				error_ids.append( self._submittedJobs[i_job])
+				error_ids.append( self._jobIds[i_job])
 				error_logfiles.append(log_file)
 			else:
-				with open(log_file) as fin:
-					log_file_content = fin.read();
-					if "BatchelorStatus: ERROR" in log_file_content or not "BatchelorStatus: OK\n" in log_file_content:
-						if verbose:
-							if not error_ids: # first found error
-								print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-							print "Error in logfile '{0}'".format(log_file)
-							print "\tfor command:'{0}'".format(self._commands[i_job])
-						error_ids.append( self._submittedJobs[i_job])
-						error_logfiles.append(log_file)
+				if not self._checkJobStatus(log_file):
+					if verbose:
+						if not error_ids: # first found error
+							print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+						print "Error in logfile '{0}'".format(log_file)
+						print "\tfor command:'{0}'".format(self._commands[i_job])
+					error_ids.append( self._jobIds[i_job])
+					error_logfiles.append(log_file)
 
-		return error_ids, error_logfiles;
+		if raiseException and len(error_ids) > 0:
+			raise BatchelorException("{0} jobs failed".format(len(error_ids)))
+		return error_ids, error_logfiles
+
+
+	def _checkJobStatus(self, log_file):
+		foundOK = False
+		foundERROR = False
+		with open(log_file) as fin:
+			for line in fin:
+				if re.match(r"^BatchelorStatus: OK$", line):
+					foundOK = True
+				if re.match(r"^BatchelorStatus: ERROR", line):
+					foundERROR = True
+		return not (foundERROR or not foundOK)
+
 
 	def resubmitStoredJobs(self, jobs_filename, jobids_to_submit = None):
 		'''
