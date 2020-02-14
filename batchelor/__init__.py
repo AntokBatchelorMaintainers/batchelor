@@ -154,24 +154,19 @@ class Batchelor:
 	def initialize(self, configFileName, systemOverride = ""):
 		self.bprint("Initializing...")
 		if not self._config.read(os.path.abspath(configFileName)):
-			self.bprint("Could not read config file '" + configFileName + "'. Initialization failed...")
-			return False
+			raise BatchelorException("Could not read config file '" + configFileName + "'. Initialization failed...")
 		if systemOverride == "":
 			self._system = detectSystem()
 			if self._system == "UNKNOWN":
-				self.bprint("Could not determine on which system we are. Initialization failed...")
-				return False
+				raise BatchelorException("Could not determine on which system we are. Initialization failed...")
 			self.bprint("Detected system '" + self._system + "'.")
 		else:
 			self._system = systemOverride
 			self.bprint("System manually set to '" + self._system + "'.")
 		if not self._config.has_section(self._system):
-			self.bprint("Could not find section describing '" + self._system +
-			            "' in config file '" + configFileName + "'. Initialization failed...")
-			return False
+			raise BatchelorException("Could not find section describing '" + self._system + "' in config file '" + configFileName + "'. Initialization failed...")
 		if not checkConfig(configFileName, self._system):
-			self.bprint("Config file contains errors. Initialization failed...")
-			return False
+			raise BatchelorException("Config file contains errors. Initialization failed...")
 		self.bprint("Importing appropriate submodule.")
 		if self._system == "c2pap":
 			import batchelor._batchelorC2PAP as batchFunctions
@@ -193,8 +188,7 @@ class Batchelor:
 		elif self._system == "lrz":
 			import batchelor._batchelorLRZ as batchFunctions
 		else:
-			self.bprint("Unknown system '" + self._system + "', cannot load appropriate submodule. Initialization failed...")
-			return False
+			raise BatchelorException("Unknown system '" + self._system + "', cannot load appropriate submodule. Initialization failed...")
 		self.batchFunctions = batchFunctions
 		self.bprint("Imported " + batchFunctions.submoduleIdentifier() + " submodule.")
 		self.bprint("Initialized.")
