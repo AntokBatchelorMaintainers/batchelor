@@ -67,7 +67,7 @@ def detectSystem():
 		return "lyon"
 	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
 		return "c2pap"
-	elif hostname.endswith("lrz.de") and runCommand("which sbatch")[0] == 0:
+	elif hostname.endswith("cm2") and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
@@ -109,7 +109,7 @@ def checkConfig(configFileName, system = ""):
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lxplusLSF": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
-	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "n_tasks_per_job" ],
+	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "partition", "n_tasks_per_job" ],
 	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
