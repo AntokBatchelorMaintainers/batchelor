@@ -1,5 +1,6 @@
 
 import ConfigParser
+import datetime
 import os.path
 import subprocess
 import time
@@ -530,7 +531,7 @@ class BatchelorHandler(Batchelor):
 		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
 		self._collectedJobs = []
 		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
-			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), 'master.log')
+			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_master.log"))
 		self._submittedJobs = Batchelor.submitArrayJobs(self, commands, outputFile = outputFile, wd=wd, jobName=jobName)
 		return self._submittedJobs
 
