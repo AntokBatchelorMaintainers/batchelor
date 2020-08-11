@@ -66,9 +66,9 @@ def detectSystem():
 		return "e18"
 	elif hostname.startswith("ccage"):
 		return "lyon"
-	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
+	elif hostname.startswith("c2paplogin") and runCommand("which llsubmit")[0] == 0:
 		return "c2pap"
-	elif hostname.endswith("cm2") and runCommand("which sbatch")[0] == 0:
+	elif hostname.startswith("cm2login") and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
