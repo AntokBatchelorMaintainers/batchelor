@@ -76,6 +76,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 
 
 def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
+	outputFileOrig = outputFile
 	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
 	i = 0
 	jids = []
@@ -86,7 +87,7 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		for k, ii in enumerate(range(i,j)):
 			fullCmd += 'if [[ ${{SGE_TASK_ID}} == {i} ]]; then {cmd}; fi\n'.format(cmd=commands[ii], i=k+1)
 		if outputFile != "/dev/null":
-			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+			outputFile = outputFileOrig + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
 		jid = submitJob(config, fullCmd, outputFile, jobName, wd, arrayStart=1, arrayEnd=nTasks, arrayStep=1)
 		jids += [jid]*nTasks
 		i=j

@@ -60,8 +60,7 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
 			tempFile.write("#SBATCH --ntasks-per-node=24 \n")
 		tempFile.write("#SBATCH --clusters={0}\n".format(config.get(submoduleIdentifier(), "clusters")))
-		if config.get(submoduleIdentifier(), "clusters") == 'mpp2':
-			tempFile.write("#SBATCH --partition=mpp2_batch \n\n\n")
+		tempFile.write("#SBATCH --partition={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
 		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
 			for line in headerFile:
@@ -96,7 +95,10 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		nTasks = j-i
 		srunConf = "\n".join(["{i} {cmd}".format(i=ii, cmd=commands[ii]) for ii in range(i,j)])
 		srunConf = srunConf.replace(r'"', r'\"')
-		fullCmd = 'tmpDir=$(mktemp -d -p {SCRATCH}/tmp)\ntrap "rm -rf \'${{tmpDir}}\'" EXIT\n'.format(SCRATCH=os.environ['SCRATCH'])
+		tmpDir = os.path.join(os.environ['SCRATCH'], 'tmp')
+		if not os.path.isdir(tmpDir):
+			os.makedirs(tmpDir)
+		fullCmd = 'tmpDir=$(mktemp -d -p {TMPDIR})\ntrap "rm -rf \'${{tmpDir}}\'" EXIT\n'.format(TMPDIR=tmpDir)
 		fullCmd += 'echo "{srun}" > ${{tmpDir}}/srun.conf\n'.format(srun='\n'.join(["{i} bash ${{tmpDir}}/{i}.sh".format(i=k) for k in range(nTasks)]))
 		for k, ii in enumerate(range(i,j)):
 			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)

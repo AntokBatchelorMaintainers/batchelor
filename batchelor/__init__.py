@@ -1,5 +1,6 @@
 
 import ConfigParser
+import datetime
 import os.path
 import subprocess
 import time
@@ -65,9 +66,9 @@ def detectSystem():
 		return "e18"
 	elif hostname.startswith("ccage"):
 		return "lyon"
-	elif hostname.startswith("login") and runCommand("which llsubmit")[0] == 0:
+	elif hostname.startswith("c2paplogin") and runCommand("which llsubmit")[0] == 0:
 		return "c2pap"
-	elif hostname.endswith("lrz.de") and runCommand("which sbatch")[0] == 0:
+	elif hostname.startswith("cm2login") and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
@@ -109,7 +110,7 @@ def checkConfig(configFileName, system = ""):
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
 	                    "lxplusLSF": [ "queue", "pool", "header_file" ],
 	                    "lyon": [],
-	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "n_tasks_per_job" ],
+	                    "lrz": [ "wall_clock_limit", "memory", "header_file", "max_active_jobs", "clusters", "partition", "n_tasks_per_job" ],
 	                    "local": [ "shell", "cores" ],
 	                    "simulator": [ "lifetime" ] }
 	filesToTest = { "gridka": [ "header_file" ],
@@ -530,7 +531,7 @@ class BatchelorHandler(Batchelor):
 		commands = ["( {0} ) &> '{1}'".format(self._commands[i], self._logfiles[i]) for i in self._collectedJobs]
 		self._collectedJobs = []
 		if outputFile == "/dev/null" and self._logfiles[0] != "/dev/null":
-			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), 'master.log')
+			outputFile = os.path.join(os.path.dirname(self._logfiles[0]), datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_master.log"))
 		self._submittedJobs = Batchelor.submitArrayJobs(self, commands, outputFile = outputFile, wd=wd, jobName=jobName)
 		return self._submittedJobs
 
