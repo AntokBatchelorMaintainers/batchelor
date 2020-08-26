@@ -21,6 +21,7 @@ def canCollectJobs():
 def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 
 
+
 	# check if only a certain amount of active jobs is allowd
 	if config.has_option(submoduleIdentifier(), "max_active_jobs"):
 		max_active_jobs = int(config.get(submoduleIdentifier(), "max_active_jobs"))
@@ -51,16 +52,23 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		tempFile.write("#SBATCH -D " + wd + "\n")
 		tempFile.write("#SBATCH -o " + outputFile + "\n")
 		tempFile.write("#SBATCH --time=" + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
+		if config.get(submoduleIdentifier(), "clusters") != 'mpp3':
+			tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
 		if jobName is not None:
 			tempFile.write("#SBATCH -J " + jobName + "\n")
 		tempFile.write("#SBATCH --get-user-env \n")
 		tempFile.write("#SBATCH --export=NONE \n")
 		if nTasks is not None:
-			tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
-			tempFile.write("#SBATCH --ntasks-per-node=24 \n")
+			if config.get(submoduleIdentifier(), "clusters") != 'mpp3':
+				tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
+			else:
+				tempFile.write("#SBATCH --nodes={0:d} \n".format((nTasks+63)//64))
+			tempFile.write("#SBATCH --ntasks-per-node={0} \n".format(24 if config.get(submoduleIdentifier(), "clusters") != 'mpp3' else 64))
 		tempFile.write("#SBATCH --clusters={0}\n".format(config.get(submoduleIdentifier(), "clusters")))
-		tempFile.write("#SBATCH --partition={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
+		if config.get(submoduleIdentifier(), "clusters") not in [ 'cm2_tiny', 'mpp3']:
+			tempFile.write("#SBATCH --partition={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
+		if config.get(submoduleIdentifier(), "clusters") == 'cm2':
+			tempFile.write("#SBATCH --qos={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
 		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:
 			for line in headerFile:
