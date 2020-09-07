@@ -98,6 +98,7 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 	nTasksPerJob=int(config.get(submoduleIdentifier(), "n_tasks_per_job"))
 	i = 0
 	jids = []
+	outputFileOrig = outputFile
 	while i < len(commands):
 		j = min(len(commands), i+nTasksPerJob)
 		nTasks = j-i
@@ -111,8 +112,8 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		for k, ii in enumerate(range(i,j)):
 			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
 		fullCmd += 'srun -n {nTasks} --multi-prog ${{tmpDir}}/srun.conf'.format( nTasks=nTasks)
-		if outputFile != "/dev/null":
-			outputFile = outputFile + (".{0}_{1}".format(i,j) if len(commands) > nTasksPerJob else "")
+		if outputFile != "/dev/null" and len(commands) > nTasksPerJob:
+			outputFile = outputFileOrig + ".{0}_{1}".format(i,j)
 		jid = _submitJob(config, fullCmd, outputFile, jobName, wd, nTasks= nTasks)
 		jids += [jid]*nTasks
 		i=j
