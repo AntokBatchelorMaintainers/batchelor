@@ -63,11 +63,11 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 				tempFile.write("#SBATCH --ntasks={0:d} \n".format(nTasks))
 			else:
 				tempFile.write("#SBATCH --nodes={0:d} \n".format((nTasks+63)//64))
-			tempFile.write("#SBATCH --ntasks-per-node={0} \n".format(24 if config.get(submoduleIdentifier(), "clusters") != 'mpp3' else 64))
+			tempFile.write("#SBATCH --ntasks-per-node={0} \n".format(28 if config.get(submoduleIdentifier(), "clusters") != 'mpp3' else 64))
 		tempFile.write("#SBATCH --clusters={0}\n".format(config.get(submoduleIdentifier(), "clusters")))
 		if config.get(submoduleIdentifier(), "clusters") not in [ 'cm2_tiny', 'mpp3']:
 			tempFile.write("#SBATCH --partition={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
-		if config.get(submoduleIdentifier(), "clusters") == 'cm2':
+		if config.get(submoduleIdentifier(), "clusters") == 'cm2' or config.get(submoduleIdentifier(), "clusters") == 'c2pap':
 			tempFile.write("#SBATCH --qos={0}\n\n".format(config.get(submoduleIdentifier(), "partition")))
 		tempFile.write("module load slurm_setup \n\n\n")
 		with open(headerFileName, 'r') as headerFile:

@@ -66,9 +66,7 @@ def detectSystem():
 		return "e18"
 	elif hostname.startswith("ccage"):
 		return "lyon"
-	elif hostname.startswith("c2paplogin") and runCommand("which llsubmit")[0] == 0:
-		return "c2pap"
-	elif ( hostname.startswith("cm2login") or hostname.startswith("mpp3") ) and runCommand("which sbatch")[0] == 0:
+	elif ( hostname.startswith("cm2login") or hostname.startswith("mpp3") or hostname.startswith("c2pap")) and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
@@ -104,7 +102,7 @@ def checkConfig(configFileName, system = ""):
 	if system != "" and not config.has_section(system):
 		print("ERROR: System set but corresponding section is missing in config file.")
 		error = True
-	requiredOptions = { "c2pap": [ "group", "notification", "notify_user", "node_usage", "wall_clock_limit", "resources", "job_type", "class" ],
+	requiredOptions = {
 	                    "e18": [ "memory", "header_file", "arch", "n_tasks_per_job"  ],
 	                    "gridka": [ "queue", "project", "memory", "header_file" ],
 	                    "lxplus": [ "flavour", "header_file", "memory", "disk" ],
@@ -117,7 +115,6 @@ def checkConfig(configFileName, system = ""):
 	                "e18": [ "header_file" ],
 	                "lxplus": [ "header_file" ],
 	                "lxplusLSF": [ "header_file" ],
-	                "c2pap": [ "header_file" ],
 	                "lrz": [ "header_file" ],
 	                "local": [ "shell" ] }
 	for section in requiredOptions.keys():
@@ -169,9 +166,7 @@ class Batchelor:
 		if not checkConfig(configFileName, self._system):
 			raise BatchelorException("Config file contains errors. Initialization failed...")
 		self.bprint("Importing appropriate submodule.")
-		if self._system == "c2pap":
-			import batchelor._batchelorC2PAP as batchFunctions
-		elif self._system == "gridka":
+		if self._system == "gridka":
 			import batchelor._batchelorGridka as batchFunctions
 		elif self._system == "e18":
 			import batchelor._batchelorE18 as batchFunctions
