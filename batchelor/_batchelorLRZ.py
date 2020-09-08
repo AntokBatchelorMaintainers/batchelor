@@ -99,6 +99,9 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 	i = 0
 	jids = []
 	outputFileOrig = outputFile
+	headerFileName = batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file"))
+	with open(headerFileName, 'r') as headerFile:
+		header = headerFile.read().replace(r'"', r'\"')
 	while i < len(commands):
 		j = min(len(commands), i+nTasksPerJob)
 		nTasks = j-i
@@ -110,7 +113,7 @@ def submitArrayJobs(config, commands, outputFile, jobName, wd = None):
 		fullCmd = 'tmpDir=$(mktemp -d -p {TMPDIR})\ntrap "rm -rf \'${{tmpDir}}\'" EXIT\n'.format(TMPDIR=tmpDir)
 		fullCmd += 'echo "{srun}" > ${{tmpDir}}/srun.conf\n'.format(srun='\n'.join(["{i} bash ${{tmpDir}}/{i}.sh".format(i=k) for k in range(nTasks)]))
 		for k, ii in enumerate(range(i,j)):
-			fullCmd += 'echo "#!/bin/bash\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(cmd=commands[ii].replace(r'"', r'\"'), i=k)
+			fullCmd += 'echo "#!/bin/bash\n{header}\n{cmd}" > ${{tmpDir}}/{i}.sh\n'.format(header=header, cmd=commands[ii].replace(r'"', r'\"'), i=k)
 		fullCmd += 'srun -n {nTasks} --multi-prog ${{tmpDir}}/srun.conf'.format( nTasks=nTasks)
 		if outputFile != "/dev/null" and len(commands) > nTasksPerJob:
 			outputFile = outputFileOrig + ".{0}_{1}".format(i,j)
