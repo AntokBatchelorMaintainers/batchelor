@@ -531,15 +531,15 @@ class BatchelorHandler(Batchelor):
 		return self._submittedJobs
 
 
-	def wait(self, timeout = 60, jobName = None):
+	def wait(self, timeout = 60, jobName = None, callback = None):
 		'''
 		Wait for all jobs, submitted by this instance, to be finished
 
 		@param timeout: Timeout in seconds between checking the joblist
 		@param jobName: Only wait for jobs with the given job-name
+		@param callback: Function to be executed after each wait intervall.
+		                 Signature: (batelorHandler instance, # running jobs)
 		'''
-
-
 		while True:
 			try:
 				running_jobs = self.getListOfSubmittedActiveJobs(jobName)
@@ -552,8 +552,8 @@ class BatchelorHandler(Batchelor):
 			if self.debug:
 				print "Waiting for jobs:", running_jobs;
 			time.sleep(timeout)
-
-
+			if callback is not None:
+				callback(self, len(running_jobs))
 		return;
 
 
