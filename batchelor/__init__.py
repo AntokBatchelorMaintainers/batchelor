@@ -461,6 +461,8 @@ class BatchelorHandler(Batchelor):
 			if not os.path.isdir(logdir):
 				os.makedirs( logdir )
 			output = tempfile.mktemp(prefix = time.strftime("%Y-%m-%d_%H-%M-%S_"),suffix = '.log', dir = logdir)
+			with open(output, 'w') as fp:
+				pass # create empty file
 
 		if self._check_job_success:
 			command = command + " && echo \"BatchelorStatus: OK\" || (s=$?; echo \"BatchelorStatus: ERROR ($s)\"; exit $s)"
@@ -571,11 +573,11 @@ class BatchelorHandler(Batchelor):
 		error_logfiles = []
 		for i_job, log_file in enumerate( self._logfiles ):
 			found = False
-			for _ in xrange(10): # 10 trails to wait for log file
+			for _ in xrange(5): # 5 trails to wait for log file
 				if os.path.isfile(log_file):
 					found = True
 					break
-				time.sleep(6)
+				time.sleep(1)
 			if not found:
 				if verbose:
 					if not error_ids: # first found error
