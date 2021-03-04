@@ -5,7 +5,10 @@ Created on Apr 20, 2016
 
 @author: ga34liw
 '''
+from __future__ import print_function
 
+from builtins import map
+from builtins import range
 program_description = ''' 
     Submits the given command via batcherlor
 '''
@@ -48,14 +51,14 @@ def main():
     if args.batchelorForMinMax:
         parsed = re.findall('([0-9]+),([0-9]+)', args.batchelorForMinMax)
         if not parsed:
-            print "Can not parse --batchelorForMinMax flag '{0}'".format( parsed )
+            print("Can not parse --batchelorForMinMax flag '{0}'".format( parsed ))
             exit(1)
         parsed = parsed[0]
-        batchelorFor += map( str, range( int(parsed[0]), int(parsed[1]) + 1 ) )
+        batchelorFor += list(map( str, list(range( int(parsed[0]), int(parsed[1]) + 1)) ))
     
     
     if not commandArgs:
-        print "No command given"
+        print("No command given")
         exit(1)
     
     command = ' '.join(commandArgs) 
@@ -69,13 +72,13 @@ def main():
     if not batchelorFor:
         handler.submitJob(command, jobName = args.batchelorJobName)
         if args.batchelorVerbose:
-            print "Execute command:\n\t'{0}'".format(command)
+            print("Execute command:\n\t'{0}'".format(command))
     else:
         for e in batchelorFor:
             command_local = command.replace("BAFOR", e)
             handler.submitJob(command_local, jobName = args.batchelorJobName)
             if args.batchelorVerbose:
-                print "Execute command:\n\t'{0}'".format(command_local)
+                print("Execute command:\n\t'{0}'".format(command_local))
     
     handler.wait()
     st= handler.checkJobStates() 

@@ -1,12 +1,16 @@
 
+from builtins import str
+from builtins import object
 import datetime
+
+import batchelor
 
 
 jobs = []
 highestId = 0
 
 
-class Job:
+class Job(object):
 
 	def __init__(self, jobId, command, outputFile, jobName, jobFinishTime):
 		self.jobId = jobId
@@ -18,7 +22,6 @@ class Job:
 	def __str__(self):
 		retval = "Simulated job " + self.jobId
 		retval += ": command '" + self.command + "', "
-		retval += "will finish at " + str(jobFinishTime)
 		return retval
 
 

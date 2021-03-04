@@ -1,5 +1,10 @@
 from __future__ import absolute_import, print_function, division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import input
+from builtins import range
+from builtins import object
 try:
 	import ConfigParser
 except:
@@ -45,11 +50,11 @@ def runCommand(commandString,wd=None):
 	                          **kwargs)
 	(stdout, stderr) = process.communicate()
 	if stdout:
-		stdout = stdout.rstrip(' \n')
+		stdout = stdout.rstrip(b' \n')
 	else:
 		stdout = ""
 	if stderr:
-		stderr = stderr.rstrip(' \n')
+		stderr = stderr.rstrip(b' \n')
 	else:
 		stderr = ""
 	return (process.returncode, stdout, stderr)
@@ -60,17 +65,17 @@ def detectSystem():
 	if returncode != 0:
 		raise BatchelorException("runCommand(\"hostname\") failed")
 	hostname = stdout
-	if hostname.startswith("gridka"):
+	if hostname.startswith(b"gridka"):
 		raise BatchelorException("hostname '" + hostname + "' seems to indicate gridka, but the wrong host")
-	elif hostname == "compass-kit.gridka.de":
+	elif hostname == b"compass-kit.gridka.de":
 		return "gridka"
-	elif hostname.startswith("lxplus") or hostname.endswith(".cern.ch"):
+	elif hostname.startswith(b"lxplus") or hostname.endswith(b".cern.ch"):
 		return "lxplusLSF"
-	elif hostname.endswith(".e18.ph.tum.de"):
+	elif hostname.endswith(b".e18.ph.tum.de"):
 		return "e18"
-	elif hostname.startswith("ccage"):
+	elif hostname.startswith(b"ccage"):
 		return "lyon"
-	elif ( hostname.startswith("cm2login") or hostname.startswith("mpp3") or hostname.startswith("c2pap")) and runCommand("which sbatch")[0] == 0:
+	elif ( hostname.startswith(b"cm2login") or hostname.startswith(b"mpp3") or hostname.startswith(b"c2pap")) and runCommand(b"which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 
@@ -121,7 +126,7 @@ def checkConfig(configFileName, system = ""):
 	                "lxplusLSF": [ "header_file" ],
 	                "lrz": [ "header_file" ],
 	                "local": [ "shell" ] }
-	for section in requiredOptions.keys():
+	for section in list(requiredOptions.keys()):
 		if config.has_section(section):
 			options = requiredOptions[section]
 			for option in options:
@@ -129,7 +134,7 @@ def checkConfig(configFileName, system = ""):
 					print("ERROR: '" + section + "' section is missing option '" + option + "'.")
 					error = True
 					continue
-				if section in filesToTest.keys() and option in filesToTest[section] and (system == "" or system == section):
+				if section in list(filesToTest.keys()) and option in filesToTest[section] and (system == "" or system == section):
 					path = _getRealPath(config.get(section, option))
 					if not os.path.exists(path):
 						print("ERROR: Could not find required file '" + path + "'.")
@@ -139,7 +144,7 @@ def checkConfig(configFileName, system = ""):
 	return True
 
 
-class Batchelor:
+class Batchelor(object):
 
 	debug = False
 	bprintTicker = ""
@@ -203,7 +208,7 @@ class Batchelor:
 	def shutdown(self):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "shutdown" in self.batchFunctions.__dict__.keys():
+		if "shutdown" in list(self.batchFunctions.__dict__.keys()):
 			return self.batchFunctions.shutdown()
 
 	def submitJob(self, command, outputFile, jobName = None, wd = None, priority = None, ompNumThreads=None):
@@ -215,7 +220,7 @@ class Batchelor:
 		kwargs = {}
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "submitJob" in self.batchFunctions.__dict__.keys():
+		if "submitJob" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			if priority is not None:
 				priority = float(priority)
@@ -244,7 +249,7 @@ class Batchelor:
 		# A job ID of -1 indicates an error during submission of this job.
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "submitJobs" in self.batchFunctions.__dict__.keys():
+		if "submitJobs" in list(self.batchFunctions.__dict__.keys()):
 			for i in range(len(jobs)):
 				if len(jobs[i]) == 3:
 					_checkForSpecialCharacters(jobs[i][2])
@@ -269,7 +274,7 @@ class Batchelor:
 	def submitArrayJobs(self, commands, outputFile, jobName = None, wd = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "submitArrayJobs" in self.batchFunctions.__dict__.keys():
+		if "submitArrayJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 
 			return self.batchFunctions.submitArrayJobs(self._config, commands, outputFile, jobName, wd)
@@ -279,7 +284,7 @@ class Batchelor:
 	def getListOfActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getListOfActiveJobs" in self.batchFunctions.__dict__.keys():
+		if "getListOfActiveJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfActiveJobs(jobName)
 		else:
@@ -288,7 +293,7 @@ class Batchelor:
 	def getNActiveJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getNActiveJobs" in self.batchFunctions.__dict__.keys():
+		if "getNActiveJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getNActiveJobs(jobName)
 		else:
@@ -297,7 +302,7 @@ class Batchelor:
 	def jobStillRunning(self, jobId):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "jobStillRunning" in self.batchFunctions.__dict__.keys():
+		if "jobStillRunning" in list(self.batchFunctions.__dict__.keys()):
 			return self.batchFunctions.jobStillRunning(jobId)
 		else:
 			raise BatchelorException("not implemented")
@@ -305,7 +310,7 @@ class Batchelor:
 	def getListOfErrorJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getListOfErrorJobs" in self.batchFunctions.__dict__.keys():
+		if "getListOfErrorJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfErrorJobs(jobName)
 		else:
@@ -314,7 +319,7 @@ class Batchelor:
 	def getListOfWaitingJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getListOfWaitingJobs" in self.batchFunctions.__dict__.keys():
+		if "getListOfWaitingJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfWaitingJobs(jobName)
 		else:
@@ -323,7 +328,7 @@ class Batchelor:
 	def getListOfRunningJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getListOfRunningJobs" in self.batchFunctions.__dict__.keys():
+		if "getListOfRunningJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.getListOfRunningJobs(jobName)
 		else:
@@ -332,7 +337,7 @@ class Batchelor:
 	def resetErrorJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "resetErrorJobs" in self.batchFunctions.__dict__.keys():
+		if "resetErrorJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.resetErrorJobs(jobName)
 		else:
@@ -341,7 +346,7 @@ class Batchelor:
 	def deleteErrorJobs(self, jobName = None):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "deleteErrorJobs" in self.batchFunctions.__dict__.keys():
+		if "deleteErrorJobs" in list(self.batchFunctions.__dict__.keys()):
 			_checkForSpecialCharacters(jobName)
 			return self.batchFunctions.deleteErrorJobs(jobName)
 		else:
@@ -350,7 +355,7 @@ class Batchelor:
 	def deleteJobs(self, jobIds):
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "deleteJobs" in self.batchFunctions.__dict__.keys():
+		if "deleteJobs" in list(self.batchFunctions.__dict__.keys()):
 			return self.batchFunctions.deleteJobs(jobIds)
 		else:
 			raise BatchelorException("not implemented")
@@ -365,7 +370,7 @@ class Batchelor:
 		'''
 		if not self.initialized():
 			raise BatchelorException("not initialized")
-		if "getListOfJobStates" in self.batchFunctions.__dict__.keys():
+		if "getListOfJobStates" in list(self.batchFunctions.__dict__.keys()):
 			return self.batchFunctions.getListOfJobStates(jobIDs, username)
 		else:
 			raise BatchelorException("not implemented")
@@ -421,8 +426,8 @@ class BatchelorHandler(Batchelor):
 				self._store_commands_filename = os.path.join(os.getcwd(), self._store_commands_filename)
 
 		def finish(signal, frame):
-			print
-			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
+			print()
+			if input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
 				print("stopping all jobs and shutting down batchelor...")
 				self.deleteJobs( self.getListOfSubmittedActiveJobs())
 				time.sleep(3);
@@ -490,7 +495,7 @@ class BatchelorHandler(Batchelor):
 			self._logfiles.append( output )
 
 			if self._store_commands:
-				with open(self._store_commands_filename, 'a') as fout:
+				with open(self._store_commands_filename, 'ab') as fout:
 					submit_entry = {'command': command, 'output': output, 'jobName': jobName, 'wd': wd, 'priority': priority, 'ompNumThreads': ompNumThreads}
 					submit = {self._jobIds[-1]:submit_entry}
 					pickle.dump(submit, fout, protocol=2)
@@ -513,7 +518,7 @@ class BatchelorHandler(Batchelor):
 		@param verbose: Print warning if collections is not implemented
 		@return: True if job collections is active
 		'''
-		if "canCollectJobs" in self.batchFunctions.__dict__.keys() and self.batchFunctions.canCollectJobs():
+		if "canCollectJobs" in list(self.batchFunctions.__dict__.keys()) and self.batchFunctions.canCollectJobs():
 			self._collectJobs = True
 		elif verbose:
 			print("Collection of jobs is not implemented for the current batch system.")
@@ -556,7 +561,7 @@ class BatchelorHandler(Batchelor):
 			if not running_jobs:
 				break
 			if self.debug:
-				print("Waiting for jobs:", running_jobs)
+				print("Waiting for jobs:", running_jobs);
 			time.sleep(timeout)
 			if callback is not None:
 				callback(self, len(running_jobs))
@@ -577,7 +582,7 @@ class BatchelorHandler(Batchelor):
 		error_logfiles = []
 		for i_job, log_file in enumerate( self._logfiles ):
 			found = False
-			for _ in range(5): # 5 trails to wait for log file
+			for _ in range(10): # 10 trails to wait for log file
 				if os.path.isfile(log_file):
 					found = True
 					break
@@ -631,12 +636,12 @@ class BatchelorHandler(Batchelor):
 				except EOFError:
 					break;
 		# change to dictionary
-		jobs = { j.keys()[0]: j.values()[0] for j in jobs }
+		jobs = { list(j.keys())[0]: list(j.values())[0] for j in jobs }
 
 		if not jobids_to_submit:
 			jobids_to_submit = sorted(jobs.keys());
 
-		key_type = type(jobs.keys()[0])
+		key_type = type(list(jobs.keys())[0])
 		new_jobids = {}
 		for jid in jobids_to_submit:
 			jid = key_type(jid)

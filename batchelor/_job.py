@@ -3,11 +3,13 @@ Created on Oct 23, 2014
 
 '''
 
+from builtins import range
+from builtins import object
 class JobStatus(object):
     
     
     # Status
-    (kRunning, kWaiting, kError, kUnknown, kTransmitting, kDeletion ) = range(6);
+    (kRunning, kWaiting, kError, kUnknown, kTransmitting, kDeletion ) = list(range(6));
 
 
     def __init__(self, job_id, status = None):

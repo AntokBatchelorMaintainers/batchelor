@@ -1,4 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
 import multiprocessing
 import os
 import sys
@@ -6,7 +10,7 @@ import tempfile
 import time
 
 import batchelor
-from _job import JobStatus
+from ._job import JobStatus
 
 
 
@@ -131,7 +135,7 @@ def _wrapSubmitJob(args):
 
 
 def getListOfActiveJobs(jobName):
-	ret = map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	ret = [j.getId() for j in getListOfJobStates(jobName, detailed=False)]
 	return ret
 
 
@@ -210,7 +214,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 			elif status=='CANCELLED' or status=='FAILED' or status=='TIMEOUT' or status=='NODE_FAIL':
 				currentJobStatus.setStatus(JobStatus.kError)
 			else:
-				print "Unknown job status", status
+				print("Unknown job status", status)
 
 			# time
 			time_str = lineSplit[6]

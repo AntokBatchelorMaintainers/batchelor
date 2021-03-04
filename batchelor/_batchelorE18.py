@@ -1,5 +1,13 @@
+from __future__ import absolute_import
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+try:
+	import ConfigParser
+except:
+	import configparser as ConfigParser
 import glob
 import os
 import tempfile
@@ -8,7 +16,7 @@ import xml.etree.ElementTree
 import re
 
 import batchelor
-from _job import JobStatus
+from ._job import JobStatus
 
 
 def submoduleIdentifier():
