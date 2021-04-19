@@ -52,7 +52,7 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		tempFile.write("#SBATCH -D " + wd + "\n")
 		tempFile.write("#SBATCH -o " + outputFile + "\n")
 		tempFile.write("#SBATCH --time=" + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		if config.get(submoduleIdentifier(), "clusters") != 'mpp3':
+		if config.get(submoduleIdentifier(), "clusters") != 'mpp3' and config.get(submoduleIdentifier(), "clusters") != 'c2pap':
 			tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
 		if jobName is not None:
 			tempFile.write("#SBATCH -J " + jobName + "\n")
