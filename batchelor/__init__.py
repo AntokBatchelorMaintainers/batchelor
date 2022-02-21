@@ -1,5 +1,9 @@
+from __future__ import absolute_import, print_function, division
 
-import ConfigParser
+try:
+	import ConfigParser
+except:
+	import configparser as ConfigParser
 import datetime
 import os.path
 import subprocess
@@ -419,14 +423,14 @@ class BatchelorHandler(Batchelor):
 		def finish(signal, frame):
 			print
 			if raw_input("You pressed Ctrl+C. Cancel all jobs? [y/N]:") == 'y':
-				print "stopping all jobs and shutting down batchelor..."
+				print("stopping all jobs and shutting down batchelor...")
 				self.deleteJobs( self.getListOfSubmittedActiveJobs())
 				time.sleep(3);
 				self.shutdown()
-				print "Done"
+				print("Done")
 				raise CancelException( "Catched Ctrl+C" );
 			else:
-				print "continuing.."
+				print("continuing..")
 
 		if catchSIGINT:
 			signal.signal( signal.SIGINT, finish)
@@ -512,10 +516,10 @@ class BatchelorHandler(Batchelor):
 		if "canCollectJobs" in self.batchFunctions.__dict__.keys() and self.batchFunctions.canCollectJobs():
 			self._collectJobs = True
 		elif verbose:
-			print "Collection of jobs is not implemented for the current batch system."
+			print("Collection of jobs is not implemented for the current batch system.")
 
 		if self._submittedJobs:
-			print "Using `collectJobs`, but {0} jobs have been already submitted.".format(len(self._submittedJobs))
+			print("Using `collectJobs`, but {0} jobs have been already submitted.".format(len(self._submittedJobs)))
 
 		return self._collectJobs
 
@@ -546,13 +550,13 @@ class BatchelorHandler(Batchelor):
 			try:
 				running_jobs = self.getListOfSubmittedActiveJobs(jobName)
 			except BatchelorException as e:
-				print "Error when fetching running jobs"
-				print e
+				print("Error when fetching running jobs")
+				print(e)
 				running_jobs = [-1] # dummy job to stay in the loop
 			if not running_jobs:
 				break
 			if self.debug:
-				print "Waiting for jobs:", running_jobs;
+				print("Waiting for jobs:", running_jobs)
 			time.sleep(timeout)
 			if callback is not None:
 				callback(self, len(running_jobs))
@@ -566,14 +570,14 @@ class BatchelorHandler(Batchelor):
 		@param raiseException: Raise exception if one or more jobes failed
 		'''
 		if not self._check_job_success:
-			print "Called checkJobStates, but Batchelor was not configured to check job states"
+			print("Called checkJobStates, but Batchelor was not configured to check job states")
 			return False
 
 		error_ids = []
 		error_logfiles = []
 		for i_job, log_file in enumerate( self._logfiles ):
 			found = False
-			for _ in xrange(5): # 5 trails to wait for log file
+			for _ in range(5): # 5 trails to wait for log file
 				if os.path.isfile(log_file):
 					found = True
 					break
@@ -581,18 +585,18 @@ class BatchelorHandler(Batchelor):
 			if not found:
 				if verbose:
 					if not error_ids: # first found error
-						print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					print "Can not find logfile '{0}'".format(log_file)
-					print "\tfor command:'{0}'".format(self._commands[i_job])
+						print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+					print("Can not find logfile '{0}'".format(log_file))
+					print("\tfor command:'{0}'".format(self._commands[i_job]))
 				error_ids.append( self._jobIds[i_job])
 				error_logfiles.append(log_file)
 			else:
 				if not self._checkJobStatus(log_file):
 					if verbose:
 						if not error_ids: # first found error
-							print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-						print "Error in logfile '{0}'".format(log_file)
-						print "\tfor command:'{0}'".format(self._commands[i_job])
+							print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+						print("Error in logfile '{0}'".format(log_file))
+						print("\tfor command:'{0}'".format(self._commands[i_job]))
 					error_ids.append( self._jobIds[i_job])
 					error_logfiles.append(log_file)
 
@@ -645,9 +649,9 @@ class BatchelorHandler(Batchelor):
 					with open(outputFile) as fin:
 						fout.write(fin.read())
 				os.remove(outputFile)
-			print "Resubmit job:", jid
+			print("Resubmit job:", jid)
 			for k in sorted(jobs[jid].keys()):
-				print "\t{0}: {1}".format(k, jobs[jid][k])
+				print("\t{0}: {1}".format(k, jobs[jid][k]))
 			new_jid = self.submitJob( **jobs[jid] )
 			new_jobids[jid] = new_jid
 
