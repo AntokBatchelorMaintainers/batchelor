@@ -51,6 +51,8 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 		cmnd += "-l long=1 "
 	elif config.has_option(submoduleIdentifier(), "ioqueue") and config.get(submoduleIdentifier(), "ioqueue") in [1, "1", "TRUE", "true", "True"]:
 		cmnd += "-l io=1 "
+	elif config.has_option(submoduleIdentifier(), "testqueue") and config.get(submoduleIdentifier(), "testqueue") in [1, "1", "TRUE", "true", "True"]:
+		cmnd += "-l test=1 "
 	else:
 		cmnd += "-l medium=1 "
 	cmnd += "-l h_pmem=" + config.get(submoduleIdentifier(), "memory") + " "
