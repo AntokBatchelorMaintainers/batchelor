@@ -62,7 +62,7 @@ def detectSystem():
 		return "gridka"
 	elif hostname.startswith("lxplus") or hostname.endswith(".cern.ch"):
 		return "lxplusLSF"
-	elif hostname.endswith(".e18.physik.tu-muenchen.de"):
+	elif hostname.endswith(".e18.ph.tum.de"):
 		return "e18"
 	elif hostname.startswith("ccage"):
 		return "lyon"
