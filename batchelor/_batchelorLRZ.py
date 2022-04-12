@@ -189,19 +189,19 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 		lineSplit = line.split()
 		try:
 			if '_' in lineSplit[0]:
-				currentJobId = int(lineSplit[0].split('_')[0])
+				currentJobId = int(lineSplit[1].split('_')[0])
 			else:
-				currentJobId = int(lineSplit[0])
+				currentJobId = int(lineSplit[1])
 			currentJobStatus = JobStatus(currentJobId)
 
 			# name
-			name = lineSplit[2]
+			name = lineSplit[3]
 			if name == jobName or jobName == None:
 				jobList.append(currentJobId)
 				jobStates.append(currentJobStatus)
 
 			# status
-			status = lineSplit[4]
+			status = lineSplit[5]
 			currentJobStatus.setStatus(JobStatus.kUnknown, name = status)
 			if status=='RUNNING':
 				currentJobStatus.setStatus(JobStatus.kRunning)
@@ -213,7 +213,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				print "Unknown job status", status
 
 			# time
-			time_str = lineSplit[5]
+			time_str = lineSplit[6]
 			try:
 				hours = 0.0
 				minutes = 0.0
@@ -234,7 +234,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				total_time = hours + minutes / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:
-				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[5]))
+				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[6]))
 		except ValueError:
 			raise batchelor.BatchelorException("parsing of squeue output to get job id failed.")
 
