@@ -47,14 +47,15 @@ def runCommand(commandString,wd=None):
 	                           stdout=subprocess.PIPE,
 	                           stderr=subprocess.PIPE,
 	                           executable="/bin/bash",
+				   encoding='utf-8',
 	                          **kwargs)
 	(stdout, stderr) = process.communicate()
 	if stdout:
-		stdout = stdout.rstrip(b' \n')
+		stdout = stdout.rstrip(' \n')
 	else:
 		stdout = ""
 	if stderr:
-		stderr = stderr.rstrip(b' \n')
+		stderr = stderr.rstrip(' \n')
 	else:
 		stderr = ""
 	return (process.returncode, stdout, stderr)
@@ -65,17 +66,17 @@ def detectSystem():
 	if returncode != 0:
 		raise BatchelorException("runCommand(\"hostname\") failed")
 	hostname = stdout
-	if hostname.startswith(b"gridka"):
+	if hostname.startswith("gridka"):
 		raise BatchelorException("hostname '" + hostname + "' seems to indicate gridka, but the wrong host")
-	elif hostname == b"compass-kit.gridka.de":
+	elif hostname == "compass-kit.gridka.de":
 		return "gridka"
-	elif hostname.startswith(b"lxplus") or hostname.endswith(b".cern.ch"):
+	elif hostname.startswith("lxplus") or hostname.endswith(".cern.ch"):
 		return "lxplusLSF"
-	elif hostname.endswith(b".e18.ph.tum.de"):
+	elif hostname.endswith(".e18.ph.tum.de"):
 		return "e18"
-	elif hostname.startswith(b"ccage"):
+	elif hostname.startswith("ccage"):
 		return "lyon"
-	elif ( hostname.startswith(b"cm2login") or hostname.startswith(b"mpp3") or hostname.startswith(b"c2pap")) and runCommand(b"which sbatch")[0] == 0:
+	elif ( hostname.startswith("cm2login") or hostname.startswith("mpp3") or hostname.startswith("c2pap")) and runCommand("which sbatch")[0] == 0:
 		return "lrz"
 	return "UNKNOWN"
 

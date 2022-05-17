@@ -59,7 +59,7 @@ class Worker(threading.Thread):
 				cmdFile.close()
 				
 				logFile = open(outputFile, "w")
-				p = subprocess.Popen([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
+				p = subprocess.Popen([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, encoding='utf-8', preexec_fn=lambda : os.setpgid(0, 0))
 				jobs[i].runningProcess = p
 
 			p.wait()
