@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import argparse
 import os
 import sys
@@ -58,7 +61,7 @@ if __name__ == "__main__":
 		print("INFO: job submission prepared. Submitting now...")
 		jobIds = []
 		if args.simulate:
-			jobIds = range(len(submissionArgs))
+			jobIds = list(range(len(submissionArgs)))
 		else:
 			jobIds = batch.submitJobs(submissionArgs)
 		print("INFO: jobs submitted, checking for failed submissions...")

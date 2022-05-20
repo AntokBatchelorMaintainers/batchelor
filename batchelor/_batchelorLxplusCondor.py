@@ -1,5 +1,11 @@
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+try:
+	import ConfigParser
+except:
+	import configparser as ConfigParser
 import os
 import tempfile
 import random
@@ -15,11 +21,11 @@ def submoduleIdentifier():
 
 def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None, arrayEnd = None, arrayStep = None):
 	if arrayStart is not None or arrayEnd is not None or arrayStep is not None:
-		raise BatchelorException("Array jobs are not (yet) implementet for CERNs HTCondor system")
+		raise batchelor.BatchelorException("Array jobs are not (yet) implementet for CERNs HTCondor system")
 
 	filesDir = os.path.join(os.getcwd(), '.log')
 	if " " in filesDir:
-		raise BatchelorException("Cannot handle submit directories with whitespaces")
+		raise batchelor.BatchelorException("Cannot handle submit directories with whitespaces")
 
 	if not os.path.exists(filesDir):
 		os.makedirs(filesDir)
@@ -29,7 +35,7 @@ def submitJob(config, command, outputFile, jobName, wd = None, arrayStart = None
 	(fileDescriptor, scriptFileName) = tempfile.mkstemp(dir=filesDir, prefix='scriptFiles_', suffix='.sh')
 	os.close(fileDescriptor)
 	atexit.register(lambda: os.remove( scriptFileName ))
-	os.chmod(scriptFileName, 0755)
+	os.chmod(scriptFileName, 0o755)
 
 	batchelor.runCommand("cp " + batchelor._getRealPath(config.get(submoduleIdentifier(), "header_file")) + " " + scriptFileName)
 	with open(scriptFileName, 'a') as scriptFile:

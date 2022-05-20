@@ -1,17 +1,22 @@
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 import multiprocessing
 import os
 import sys
-import Queue
+from queue import Queue, Empty
 import subprocess
 import tempfile
 import threading
 
 import batchelor
-from _job import JobStatus
+from ._job import JobStatus
 
 
-class Job:
+class Job(object):
 
 	def __init__(self, jobId, command, outputFile, jobName):
 		self.jobId = jobId
@@ -32,7 +37,7 @@ class Worker(threading.Thread):
 		while True:
 			try:
 				jobId = queue.get(timeout = 2)
-			except Queue.Empty:
+			except Empty:
 				with guard:
 					if aux[1]:
 						break
@@ -50,11 +55,11 @@ class Worker(threading.Thread):
 				command = jobs[i].command
 				cmdFile = tempfile.NamedTemporaryFile(delete = False)
 				for line in command:
-					cmdFile.write(line)
+					cmdFile.write(line.encode())
 				cmdFile.close()
 				
 				logFile = open(outputFile, "w")
-				p = subprocess.Popen([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, preexec_fn=lambda : os.setpgid(0, 0))
+				p = subprocess.Popen([self.shell, cmdFile.name], stdout=logFile, stderr=subprocess.STDOUT, encoding='utf-8', preexec_fn=lambda : os.setpgid(0, 0))
 				jobs[i].runningProcess = p
 
 			p.wait()
@@ -72,7 +77,7 @@ class Worker(threading.Thread):
 
 workers = []
 guard = threading.Lock()
-queue = Queue.Queue()
+queue = Queue()
 jobs = []
 aux = [0, False]
 

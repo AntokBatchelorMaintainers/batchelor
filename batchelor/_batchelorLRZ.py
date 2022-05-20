@@ -1,4 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
 import multiprocessing
 import os
 import sys
@@ -6,7 +10,7 @@ import tempfile
 import time
 
 import batchelor
-from _job import JobStatus
+from ._job import JobStatus
 
 
 
@@ -52,7 +56,7 @@ def _submitJob(config, command, outputFile, jobName, wd = None, nTasks=None):
 		tempFile.write("#SBATCH -D " + wd + "\n")
 		tempFile.write("#SBATCH -o " + outputFile + "\n")
 		tempFile.write("#SBATCH --time=" + config.get(submoduleIdentifier(), "wall_clock_limit") + "\n")
-		if config.get(submoduleIdentifier(), "clusters") != 'mpp3':
+		if config.get(submoduleIdentifier(), "clusters") != 'mpp3' and config.get(submoduleIdentifier(), "clusters") != 'c2pap':
 			tempFile.write("#SBATCH --mem-per-cpu=" + config.get(submoduleIdentifier(), "memory") + "\n")
 		if jobName is not None:
 			tempFile.write("#SBATCH -J " + jobName + "\n")
@@ -131,7 +135,7 @@ def _wrapSubmitJob(args):
 
 
 def getListOfActiveJobs(jobName):
-	ret = map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	ret = [j.getId() for j in getListOfJobStates(jobName, detailed=False)]
 	return ret
 
 
@@ -189,19 +193,19 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 		lineSplit = line.split()
 		try:
 			if '_' in lineSplit[0]:
-				currentJobId = int(lineSplit[0].split('_')[0])
+				currentJobId = int(lineSplit[1].split('_')[0])
 			else:
-				currentJobId = int(lineSplit[0])
+				currentJobId = int(lineSplit[1])
 			currentJobStatus = JobStatus(currentJobId)
 
 			# name
-			name = lineSplit[2]
+			name = lineSplit[3]
 			if name == jobName or jobName == None:
 				jobList.append(currentJobId)
 				jobStates.append(currentJobStatus)
 
 			# status
-			status = lineSplit[4]
+			status = lineSplit[5]
 			currentJobStatus.setStatus(JobStatus.kUnknown, name = status)
 			if status=='RUNNING':
 				currentJobStatus.setStatus(JobStatus.kRunning)
@@ -210,10 +214,10 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 			elif status=='CANCELLED' or status=='FAILED' or status=='TIMEOUT' or status=='NODE_FAIL':
 				currentJobStatus.setStatus(JobStatus.kError)
 			else:
-				print "Unknown job status", status
+				print("Unknown job status", status)
 
 			# time
-			time_str = lineSplit[5]
+			time_str = lineSplit[6]
 			try:
 				hours = 0.0
 				minutes = 0.0
@@ -234,7 +238,7 @@ def getListOfJobStates(jobName, username = None, detailed = True):
 				total_time = hours + minutes / 60.0 + seconds / 3600.0
 				currentJobStatus.setCpuTime(total_time, 0)
 			except ValueError:
-				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[5]))
+				raise batchelor.BatchelorException("parsing of squeue output to get time information failed. ({0})".format(lineSplit[6]))
 		except ValueError:
 			raise batchelor.BatchelorException("parsing of squeue output to get job id failed.")
 

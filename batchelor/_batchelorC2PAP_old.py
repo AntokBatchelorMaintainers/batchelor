@@ -1,11 +1,13 @@
+from __future__ import absolute_import
 
+from builtins import str
 import multiprocessing
 import os
 import tempfile
 import re
 
 import batchelor
-from _job import JobStatus
+from ._job import JobStatus
 
 
 
@@ -106,7 +108,7 @@ def submitJobs(config, newJobs):
 
 
 def getListOfActiveJobs(jobName):
-	return map( lambda j: j.getId(), getListOfJobStates(jobName, detailed=False) )
+	return [j.getId() for j in getListOfJobStates(jobName, detailed=False)]
 
 
 def getNActiveJobs(jobName):

@@ -1,5 +1,11 @@
 
-import ConfigParser
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+try:
+	import ConfigParser
+except:
+	import configparser as ConfigParser
 import os
 import tempfile
 import random
