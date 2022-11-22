@@ -629,7 +629,7 @@ class BatchelorHandler(Batchelor):
 		@return ids of resubmitted jobs {old_jobid: new_jobid}
 		'''
 		jobs = []
-		with open(jobs_filename) as fin:
+		with open(jobs_filename, "rb") as fin:
 			while True:
 				try:
 					j = pickle.load(fin)
