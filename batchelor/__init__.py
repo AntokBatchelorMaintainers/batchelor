@@ -42,13 +42,14 @@ def runCommand(commandString,wd=None):
 	kwargs = {}
 	if wd is not None:
 		kwargs['cwd'] = wd
+	if sys.version_info.major == 3: # Encoding necessary in Python3, but enconding argument missing in Python2
+		kwargs["encoding"] = 'utf-8'
 	process = subprocess.Popen(commandString,
 	                           shell=True,
 	                           stdout=subprocess.PIPE,
 	                           stderr=subprocess.PIPE,
 	                           executable="/bin/bash",
-				   encoding='utf-8',
-	                          **kwargs)
+	                           **kwargs)
 	(stdout, stderr) = process.communicate()
 	if stdout:
 		stdout = stdout.rstrip(' \n')
@@ -629,7 +630,7 @@ class BatchelorHandler(Batchelor):
 		@return ids of resubmitted jobs {old_jobid: new_jobid}
 		'''
 		jobs = []
-		with open(jobs_filename) as fin:
+		with open(jobs_filename, "rb") as fin:
 			while True:
 				try:
 					j = pickle.load(fin)
